@@ -8,10 +8,7 @@
 export type EditFormat = "search-replace" | "unified-diff" | "whole-file";
 
 /** A parsed but not-yet-applied edit. */
-export type ParsedEdit =
-  | SearchReplaceEdit
-  | UnifiedDiffEdit
-  | WholeFileEdit;
+export type ParsedEdit = SearchReplaceEdit | UnifiedDiffEdit | WholeFileEdit;
 
 export interface SearchReplaceEdit {
   format: "search-replace";
@@ -70,8 +67,13 @@ export type ApplyFailureReason =
  *  current file contents and decides what to do with the result. */
 export type FileMap = Record<string, string>;
 
-/** A reader for original file contents. Either a synchronous map or an async function. */
-export type FileReader = FileMap | ((path: string) => string | Promise<string>);
+/** A reader for original file contents. Either a synchronous map or a function.
+ *
+ * Functions may return `null` (or throw) for paths that don't exist. The applier treats
+ * a missing file as a "create" when `allowCreate` is true and the edit format supports
+ * creation (empty SEARCH for search-replace, `/dev/null` source for unified-diff, any
+ * whole-file edit). */
+export type FileReader = FileMap | ((path: string) => string | null | Promise<string | null>);
 
 /** Options that influence parsing and applying. */
 export interface ApplyOptions {

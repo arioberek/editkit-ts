@@ -200,7 +200,7 @@ Rules:
 
 ### Whole-file
 
-```
+````
 When you propose a code change, output the file's new full contents. Each file must look like:
 
 PATH/TO/FILE
@@ -212,7 +212,7 @@ Rules:
 - The path goes on the line above the opening fence.
 - The fence language is informational; ```ts, ```py, etc.
 - Output one fenced block per file. Do not omit any lines.
-```
+````
 
 ## Comparison
 

@@ -1,0 +1,64 @@
+{
+  "name": "editkit",
+  "version": "0.1.0",
+  "description": "Robust LLM edit-format toolkit for TypeScript. Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits — battle-tested fuzzy matching ported from aider.",
+  "keywords": [
+    "llm",
+    "ai",
+    "ai-sdk",
+    "coding-agent",
+    "search-replace",
+    "diff",
+    "patch",
+    "edit",
+    "apply",
+    "aider",
+    "cursor",
+    "fuzzy-match"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ai-sdk": {
+      "types": "./dist/ai-sdk.d.ts",
+      "import": "./dist/ai-sdk.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome check ."
+  },
+  "license": "MIT",
+  "author": "Ariel Oberek <arieltonoberek@gmail.com>",
+  "homepage": "https://github.com/arioberek/editkit-ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arioberek/editkit-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arioberek/editkit-ts/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.1.13",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

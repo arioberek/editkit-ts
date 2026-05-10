@@ -88,6 +88,259 @@ for await (const { edit, result } of streamEdits(textStream, async (p) =>
 }
 ```
 
+## Recipes
+
+Patterns from aider's real workflows, ported to TypeScript. Pick the format that fits the task; mix formats in one response when needed.
+
+### Test-fix loop
+
+Failing test in, fix attempt out. Retry once with the parser's error fed back, then bail. This is the canonical aider loop.
+
+```ts
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+async function attempt(prompt: string) {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt,
+  });
+  const results = await applyEdits(text, (p) => readFile(p, "utf8"));
+  for (const r of results) if (r.ok) await writeFile(r.path, r.after);
+  return results.filter((r) => !r.ok);
+}
+
+const failures = await attempt(
+  `Fix the code so this test passes:\n\n${testOutput.slice(0, 2000)}`,
+);
+if (failures.length) {
+  await attempt(
+    `Your previous edit failed:\n${failures.map((f) => `${f.path}: ${f.message}`).join("\n")}\n\nTry again.`,
+  );
+}
+```
+
+### Bulk codemod across a directory
+
+One file, one model call, one commit. A bad pass becomes a single revert.
+
+```ts
+import { glob } from "glob";
+import { $ } from "bun";
+
+for (const path of await glob("src/**/*.ts")) {
+  const source = await readFile(path, "utf8");
+  const { text } = await generateText({
+    model: openai("gpt-4o-mini"),
+    system: WHOLE_FILE_PROMPT,
+    prompt: `Add JSDoc to every exported symbol in ${path}:\n\n\`\`\`ts\n${source}\n\`\`\``,
+  });
+  const [r] = await applyEdits(text, { [path]: source }, { formats: ["whole-file"] });
+  if (r?.ok) {
+    await writeFile(path, r.after);
+    await $`git commit -am ${`docs: jsdoc for ${path}`}`;
+  }
+}
+```
+
+### Multi-file refactor
+
+Add `--verbose` and thread it through every call site. SEARCH/REPLACE handles N files in one response and applies them in source order, so later edits to the same file see the earlier ones.
+
+```ts
+const FILES = ["src/cli.ts", "src/config.ts", "src/runner.ts", "src/log.ts"];
+const contents = Object.fromEntries(
+  await Promise.all(FILES.map(async (p) => [p, await readFile(p, "utf8")] as const)),
+);
+
+const fileSection = FILES
+  .map((p) => `### ${p}\n\`\`\`ts\n${contents[p]}\n\`\`\``)
+  .join("\n\n");
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: SEARCH_REPLACE_PROMPT,
+  prompt: `Add a --verbose flag and thread it through every file below.\n\n${fileSection}`,
+});
+
+const results = await applyEdits(text, contents);
+const conflicts = results.filter((r) => !r.ok);
+if (conflicts.length) {
+  for (const c of conflicts) console.error(`✗ ${c.path}: ${c.message}`);
+  process.exit(1);
+}
+for (const r of results) if (r.ok) await writeFile(r.path, r.after);
+```
+
+### Architect / editor split
+
+Strong reasoning model writes the plan. The cheap fast editor model turns the plan into edit blocks, seeing only the plan and the file (never the user prompt). On aider's benchmarks this doubled diff-format pass rates for hard tasks.
+
+```ts
+import { anthropic } from "@ai-sdk/anthropic";
+
+const file = await readFile("src/auth.ts", "utf8");
+
+const { text: plan } = await generateText({
+  model: anthropic("claude-opus-4-7"),
+  prompt: `Sketch the diff for adding OAuth alongside email auth in src/auth.ts. List the exact functions to add, change, or remove.\n\n\`\`\`ts\n${file}\n\`\`\``,
+});
+
+const { text: edits } = await generateText({
+  model: openai("gpt-4o-mini"),
+  system: SEARCH_REPLACE_PROMPT,
+  prompt: `Turn this plan into SEARCH/REPLACE blocks for src/auth.ts:\n\n${plan}\n\n\`\`\`ts\n${file}\n\`\`\``,
+});
+
+const results = await applyEdits(edits, { "src/auth.ts": file });
+```
+
+### Lint-after-edit auto-fix
+
+Apply, lint the touched files, feed lint errors back. Catches malformed edits before they reach the commit.
+
+```ts
+import { $ } from "bun";
+
+const results = await applyEdits(llmOutput, (p) => readFile(p, "utf8"));
+const written: string[] = [];
+for (const r of results) {
+  if (!r.ok) continue;
+  await writeFile(r.path, r.after);
+  written.push(r.path);
+}
+
+const lint = await $`biome check ${written}`.nothrow();
+if (lint.exitCode !== 0) {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt: `Fix these lint errors:\n${lint.stdout.toString()}`,
+  });
+  const fix = await applyEdits(text, (p) => readFile(p, "utf8"));
+  for (const r of fix) if (r.ok) await writeFile(r.path, r.after);
+}
+```
+
+### GitHub PR review bot
+
+Webhook fires on a `/fix` comment. The model writes a unified diff that the bot commits back to the PR branch.
+
+```ts
+// Inside an octokit webhook handler
+const { data: file } = await octokit.repos.getContent({
+  owner, repo, path, ref: pr.head.sha,
+});
+const original = Buffer.from((file as any).content, "base64").toString();
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: UNIFIED_DIFF_PROMPT,
+  prompt: `Apply this reviewer feedback to ${path}:\n\n> ${comment.body}\n\n\`\`\`\n${original}\n\`\`\``,
+});
+
+const [r] = await applyEdits(text, { [path]: original }, { formats: ["unified-diff"] });
+if (!r?.ok) {
+  await octokit.issues.createComment({
+    owner, repo, issue_number: pr.number,
+    body: `Couldn't apply: ${r?.message ?? "no edits parsed"}`,
+  });
+  return;
+}
+
+await octokit.repos.createOrUpdateFileContents({
+  owner, repo, path,
+  branch: pr.head.ref,
+  sha: (file as any).sha,
+  message: `fix: ${comment.body.slice(0, 60)}`,
+  content: Buffer.from(r.after).toString("base64"),
+});
+```
+
+### Slack-driven edits
+
+Mention the bot, name a file, say what to do. The bot pushes a branch.
+
+```ts
+app.event("app_mention", async ({ event, say }) => {
+  const m = event.text.match(/edit (\S+) (.+)/);
+  if (!m) return say("Usage: @bot edit <path> <instruction>");
+  const [, path, instruction] = m;
+
+  const original = await readFile(path, "utf8");
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt: `${instruction}\n\n\`\`\`\n${original}\n\`\`\``,
+  });
+  const [r] = await applyEdits(text, { [path]: original });
+  if (!r?.ok) return say(`Couldn't apply: ${r?.message ?? "no edits"}`);
+
+  await writeFile(path, r.after);
+  await $`git checkout -b ${`slack/${event.ts}`} && git commit -am ${instruction} && git push -u origin HEAD`;
+  await say(`Pushed branch \`slack/${event.ts}\``);
+});
+```
+
+### Framework migration with unified diffs
+
+Multi-hunk changes per file: Next 13 → 15, React class → hooks, Express 4 → 5. Unified diff outperforms SEARCH/REPLACE here because the diff structure stops the model from emitting `// ...rest unchanged` placeholders.
+
+```ts
+const page = await readFile("app/products/[id]/page.tsx", "utf8");
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: UNIFIED_DIFF_PROMPT,
+  prompt: `Migrate this Next 13 page to Next 15: async params, new metadata API, new caching defaults.\n\n\`\`\`tsx\n${page}\n\`\`\``,
+});
+const [r] = await applyEdits(
+  text,
+  { "app/products/[id]/page.tsx": page },
+  { formats: ["unified-diff"] },
+);
+if (r?.ok) await writeFile(r.path, r.after);
+```
+
+### Cross-language port (file creation)
+
+Whole-file with `allowCreate` (the default) handles new paths. Useful for language ports, scaffolding generators, "explain this and write the test" prompts.
+
+```ts
+const py = await readFile("src/parser.py", "utf8");
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: WHOLE_FILE_PROMPT,
+  prompt: `Port this Python module to Rust. Output as src/parser.rs:\n\n\`\`\`py\n${py}\n\`\`\``,
+});
+const [r] = await applyEdits(text, async () => null, { formats: ["whole-file"] });
+if (r?.ok) await writeFile(r.path, r.after);
+```
+
+### Live diff preview UI
+
+`streamEdits` yields each completed edit the moment its closing fence arrives. Flicker each file's diff into the UI before the model finishes the whole response.
+
+```ts
+import { streamEdits } from "editkit/ai-sdk";
+import { diffLines } from "diff";
+
+for await (const { edit, result } of streamEdits(textStream, (p) => readFile(p, "utf8"))) {
+  if (!result.ok) {
+    ws.send({ type: "edit-error", path: result.path, reason: result.reason, message: result.message });
+    continue;
+  }
+  ws.send({
+    type: "edit-preview",
+    path: result.path,
+    format: edit.format,
+    diff: diffLines(result.before, result.after),
+  });
+}
+```
+
 ## API
 
 ### `parseEdits(input, options?)`

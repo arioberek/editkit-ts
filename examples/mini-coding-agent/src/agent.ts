@@ -153,10 +153,6 @@ function isOk(result: ApplyResult): result is Extract<ApplyResult, { ok: true }>
   return result.ok;
 }
 
-function readFromMap(files: Record<string, string>) {
-  return (path: string): string | null => (path in files ? (files[path] ?? "") : null);
-}
-
 function buildInitialUserPrompt(task: string, files: Record<string, string>): string {
   const listing = Object.keys(files)
     .sort()

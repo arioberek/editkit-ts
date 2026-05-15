@@ -17,7 +17,6 @@ import { type AttemptLog, type LLM, runAgent } from "./agent.ts";
 import { createMockLLM } from "./mock-llm.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TARGET_ROOT = resolve(HERE, "..", "target");
 
 const C = {
   reset: "\x1b[0m",
@@ -59,14 +58,13 @@ function selectLLM(scenario: "multifile" | "retry"): LLM {
 }
 
 async function selectLLMOrLive(scenario: "multifile" | "retry"): Promise<LLM> {
-  const mode = process.env.EDITKIT_DEMO_MODE;
-  const wantsLive = mode !== "mock" && process.env.OPENAI_API_KEY;
+  const wantsLive = process.env.EDITKIT_DEMO_MODE === "live" && process.env.OPENAI_API_KEY;
   if (!wantsLive) return selectLLM(scenario);
 
   try {
     const { createOpenAILLM } = await import("./openai-llm.ts");
     console.log(
-      `${C.dim}(live mode: using OpenAI; set EDITKIT_DEMO_MODE=mock to override)${C.reset}`,
+      `${C.dim}(live mode: using OpenAI; unset EDITKIT_DEMO_MODE to use the offline mock)${C.reset}`,
     );
     return await createOpenAILLM();
   } catch (err) {

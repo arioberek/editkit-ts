@@ -100,24 +100,27 @@ describe("mini-coding-agent demo", () => {
     expect(initial).toEqual(before);
   });
 
-  it("throws a clear error if the agent asks for more responses than configured", async () => {
+  it("returns success=false with all attempts logged when retries are exhausted", async () => {
     const initial = await loadTarget();
-    // Only one fixture configured, but force a retry by feeding a transcript whose edit
-    // intentionally cannot apply.
+    // Round 1 fixture intentionally fails (its SEARCH block is stale). With maxRetries=0
+    // the agent gets exactly one shot, so the failure exhausts the budget immediately and
+    // runAgent returns rather than asking the mock for another response.
     const llm = createMockLLM([{ path: "scenario-retry/round-1.txt" }]);
 
-    let caught: unknown = null;
-    try {
-      await runAgent({
-        task: "Add a clear() method to the Store class.",
-        files: initial,
-        llm,
-        maxRetries: 2,
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toMatch(/mock-llm/);
+    const result = await runAgent({
+      task: "Add a clear() method to the Store class.",
+      files: initial,
+      llm,
+      maxRetries: 0,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.attempts).toHaveLength(1);
+    const round1 = result.attempts[0];
+    expect(round1).toBeDefined();
+    if (!round1) return;
+    expect(round1.failures.length).toBeGreaterThanOrEqual(1);
+    const reason = round1.failures[0]?.reason;
+    expect(["search-not-found", "ambiguous-match"]).toContain(reason ?? "");
   });
 });

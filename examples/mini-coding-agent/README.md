@@ -1,15 +1,14 @@
 # mini-coding-agent
 
-A ~200-line coding agent that takes a natural-language task, edits multiple files in real
-time as the LLM streams its response, and recovers from failed edits by feeding editkit's
-structured failure messages back to the model. Runs **offline by default** — no API key
-required — by replaying pre-recorded LLM transcripts through the same `streamEdits` code
-path a real model uses.
+A small coding agent (~530 LOC across 4 files in `src/`) that takes a natural-language
+task, edits multiple files in real time as the LLM streams its response, and recovers
+from failed edits by feeding editkit's structured failure messages back to the model.
+Runs **offline by default** — no API key required — by replaying pre-recorded LLM
+transcripts through the same `streamEdits` code path a real model uses.
 
 ## Why this proves editkit is useful
 
-Without editkit, the things this 200-line example does for you would each be a small
-project:
+Without editkit, the things this example does for you would each be a small project:
 
 - **Parse three edit formats** in one response: SEARCH/REPLACE blocks, unified diffs, and
   whole-file blocks. The agent doesn't have to choose a format — the model picks whatever
@@ -19,10 +18,21 @@ project:
 - **Streaming buffer** that knows when an edit is *complete* (closing fence has arrived)
   so the UI can flicker each diff in as it lands instead of waiting for end-of-response.
 - **Structured failure** with a `reason` code (`search-not-found`, `ambiguous-match`,
-  `hunk-context-mismatch`, ...) and a `message` string written to be model-readable.
-  The retry loop in `src/agent.ts` literally copies those messages into the next prompt.
+  `hunk-context-mismatch`, ...) and a `message` string written to be model-readable. The
+  retry loop in `src/agent.ts` builds the next user prompt out of editkit's structured
+  `reason` + `message` strings *plus* a re-render of the affected files' current contents.
+  Both pieces matter: the failure message names the path and the problem but does not
+  echo the SEARCH block that failed to match, so the re-rendered file is what gives the
+  model fresh source to re-quote from.
 - **Multi-edit-same-file overlay** so two SEARCH/REPLACE blocks in one response that both
   edit `store.ts` see each other's output.
+- **Format opt-in is a sharp edge worth knowing about.** editkit's default `detectFormats`
+  only returns `whole-file` when no SEARCH/REPLACE or unified-diff markers are present in
+  the response, so a mixed response (like the multifile fixture) would silently drop the
+  whole-file block under the default detector. This example passes an explicit
+  `formats: ["search-replace", "unified-diff", "whole-file"]` to `streamEdits` so all
+  three are parsed. If you build your own agent that prompts for mixed formats, do the
+  same.
 
 ## Run the demo (offline, no API key)
 
@@ -45,14 +55,19 @@ You'll see two scenarios run end-to-end:
 
 2. **Scenario B — failure → retry recovery.** The first response quotes a stale
    `delete(key)` signature and fails with `search-not-found`. The agent feeds the failure
-   message back to the LLM, which (in the second fixture) emits a corrected SEARCH/REPLACE
-   block. Round 2 succeeds.
+   message (and the current contents of the affected file) back to the LLM, which (in the
+   second fixture) emits a corrected SEARCH/REPLACE block. Round 2 succeeds.
 
 ## Run with a real model
 
 ```bash
-OPENAI_API_KEY=sk-... bun run demo:live
+EDITKIT_DEMO_MODE=live OPENAI_API_KEY=sk-... bun run demo:live
 ```
+
+Live mode is opt-in: the demo only calls OpenAI when `EDITKIT_DEMO_MODE=live` is set
+(`demo:live` sets it for you). Without that env var, the demo always uses the offline mock,
+even if `OPENAI_API_KEY` happens to be in your environment, so you can run `bun run demo`
+in any shell without worrying about accidentally burning API quota.
 
 `src/openai-llm.ts` wraps `streamText` from the AI SDK into the same `LLM` interface the
 mock uses, so the rest of the agent code is identical. The `ai` and `@ai-sdk/openai`

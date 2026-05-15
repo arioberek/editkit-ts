@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "demo": "bun run src/demo.ts",
-    "demo:live": "bun run src/demo.ts",
+    "demo:live": "EDITKIT_DEMO_MODE=live bun run src/demo.ts",
     "test": "bun test test/"
   },
   "devDependencies": {
@@ -14,13 +14,5 @@
     "ai": "^6.0.182",
     "editkit": "file:../..",
     "typescript": "^5.7.2"
-  },
-  "peerDependenciesMeta": {
-    "ai": {
-      "optional": true
-    },
-    "@ai-sdk/openai": {
-      "optional": true
-    }
   }
 }

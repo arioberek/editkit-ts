@@ -341,6 +341,10 @@ for await (const { edit, result } of streamEdits(textStream, (p) => readFile(p, 
 }
 ```
 
+## Examples
+
+See the [examples/](./examples) directory for runnable demos. The [mini-coding-agent](./examples/mini-coding-agent) example runs offline (no API key required) and shows multi-file edits, mixed formats, and structured-failure retry recovery.
+
 ## API
 
 ### `parseEdits(input, options?)`

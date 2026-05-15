@@ -1,0 +1,87 @@
+I'll add TTL support to the store, pull the TTL helpers into a new module, and extend the logger to accept a `meta` object.
+
+Single SEARCH/REPLACE on the Store class — adds the expiries map, extends `set` with a TTL parameter, clears expiries on `delete`, replaces the TODO marker with an `isExpired` helper:
+
+target/src/store.ts
+<<<<<<< SEARCH
+export class Store {
+  private data = new Map<string, unknown>();
+
+  get(key: string): unknown {
+    return this.data.get(key);
+  }
+
+  set(key: string, value: unknown): void {
+    this.data.set(key, value);
+  }
+
+  delete(key: string): boolean {
+    return this.data.delete(key);
+  }
+
+  // TODO: support TTLs
+  size(): number {
+    return this.data.size;
+  }
+}
+=======
+export class Store {
+  private data = new Map<string, unknown>();
+  private expiries = new Map<string, number>();
+
+  get(key: string): unknown {
+    return this.data.get(key);
+  }
+
+  set(key: string, value: unknown, ttlMs?: number): void {
+    this.data.set(key, value);
+    if (ttlMs !== undefined) {
+      this.expiries.set(key, Date.now() + ttlMs);
+    }
+  }
+
+  delete(key: string): boolean {
+    this.expiries.delete(key);
+    return this.data.delete(key);
+  }
+
+  isExpired(key: string): boolean {
+    const exp = this.expiries.get(key);
+    return exp !== undefined && Date.now() > exp;
+  }
+
+  size(): number {
+    return this.data.size;
+  }
+}
+>>>>>>> REPLACE
+
+A small new helper module — this one is best as a whole-file edit because the file does not exist yet:
+
+target/src/ttl.ts
+```ts
+export function inMs(seconds: number): number {
+  return seconds * 1000;
+}
+
+export function inSeconds(ms: number): number {
+  return Math.floor(ms / 1000);
+}
+```
+
+Finally the logger gets an optional `meta` parameter — using a unified diff because the change touches a few non-contiguous lines in the same hunk:
+
+--- a/target/src/logger.ts
++++ b/target/src/logger.ts
+@@ -1,6 +1,9 @@
+ export type LogLevel = "info" | "warn" | "error";
+ 
+-export function log(level: LogLevel, msg: string): void {
++export function log(level: LogLevel, msg: string, meta?: Record<string, unknown>): void {
+   const stamp = new Date().toISOString();
+-  const line = `[${stamp}] ${level.toUpperCase()} ${msg}`;
++  const suffix = meta ? ` ${JSON.stringify(meta)}` : "";
++  const line = `[${stamp}] ${level.toUpperCase()} ${msg}${suffix}`;
+   if (level === "error") {
+     console.error(line);
+   } else if (level === "warn") {

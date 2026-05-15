@@ -1,0 +1,16 @@
+Sorry — I quoted a stale version of the file. Here's the corrected SEARCH/REPLACE block matching the real signature.
+
+target/src/store.ts
+<<<<<<< SEARCH
+  delete(key: string): boolean {
+    return this.data.delete(key);
+  }
+=======
+  delete(key: string): boolean {
+    return this.data.delete(key);
+  }
+
+  clear(): void {
+    this.data.clear();
+  }
+>>>>>>> REPLACE

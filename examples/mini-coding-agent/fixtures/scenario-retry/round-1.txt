@@ -1,0 +1,16 @@
+I'll add a `clear()` method to the store.
+
+target/src/store.ts
+<<<<<<< SEARCH
+  delete(key: string) {
+    return this.data.remove(key);
+  }
+=======
+  delete(key: string): boolean {
+    return this.data.delete(key);
+  }
+
+  clear(): void {
+    this.data.clear();
+  }
+>>>>>>> REPLACE

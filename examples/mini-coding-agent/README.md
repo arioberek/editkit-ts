@@ -78,7 +78,9 @@ those packages.
 ## What to look at
 
 - **`src/agent.ts`** — the `runAgent` function. The retry loop is the punchline: when an
-  edit fails, we put `result.message` directly into the next user prompt.
+  edit fails, the next user prompt combines editkit's structured `reason` + `message`
+  strings with a re-render of the affected files' current contents, so the model has
+  both the diagnosis and fresh source to re-quote from.
 - **`src/mock-llm.ts`** — yields fixture text in chunks of varying small sizes so the
   streaming code path is exercised the same way it would be with a live model.
 - **`fixtures/scenario-multifile/round-1.txt`** — what an LLM emits when it wants to make

@@ -5,9 +5,10 @@
  *   B) "retry"     — the first response has a wrong SEARCH block; the agent feeds the
  *                    structured failure message back to the LLM and the second response fixes it.
  *
- * Defaults to the offline mock LLM (no API key required). Set OPENAI_API_KEY to use the
- * live OpenAI adapter — though note that with a non-deterministic model, the precise edits
- * may differ from the recorded fixtures.
+ * Defaults to the offline mock LLM (no API key required). Set `EDITKIT_DEMO_MODE=live`
+ * and `OPENAI_API_KEY` (or use the `demo:live` script) to switch to the live OpenAI
+ * adapter — though note that with a non-deterministic model, the precise edits may
+ * differ from the recorded fixtures.
  */
 
 import { readFile } from "node:fs/promises";

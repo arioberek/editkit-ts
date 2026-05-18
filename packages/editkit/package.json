@@ -1,6 +1,6 @@
 {
   "name": "editkit",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Robust LLM edit-format toolkit for TypeScript. Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits — battle-tested fuzzy matching ported from aider.",
   "keywords": [
     "llm",
@@ -45,7 +45,12 @@
       "import": "./dist/ai-sdk.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "bun test tests/",

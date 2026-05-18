@@ -1,0 +1,35 @@
+---
+title: Comparison & status
+description: How editkit stacks up against aider and other TS tools, plus what's in v0.1.x.
+---
+
+## Comparison
+
+| Project | Language | Formats supported | Streaming | Fuzzy matching |
+| ------- | -------- | ----------------- | --------- | -------------- |
+| **editkit** | TypeScript | search-replace, unified-diff, whole-file | yes (AI SDK) | yes (3 strategies) |
+| [aider](https://github.com/paul-gauthier/aider) | Python | all of the above + 4 more | n/a | yes (origin of the algorithms) |
+| [nocapro/apply-multi-diff](https://github.com/nocapro/apply-multi-diff) | TypeScript | search-replace, unified-diff | no | partial |
+
+If you need *more* edit formats (architect, ask, etc.) — use aider via subprocess. If you
+need them in TS, file an [issue](https://github.com/arioberek/editkit-ts/issues).
+
+## Status
+
+`v0.1.x` — public API stable, more aider parity coming. Test suite covers 40+ adversarial
+fixtures including:
+
+- 7+-character fence drift
+- Inline path on the SEARCH line
+- Path inside the SEARCH block
+- Fenced ``` inside SEARCH/REPLACE bodies
+- Drifted unified-diff hunk numbers
+- CRLF preservation
+- Multi-file inputs
+- Consecutive edits to the same file
+
+## License
+
+MIT. Portions of the algorithm design (the SEARCH/REPLACE fuzzy strategies) are ports of
+aider's MIT-licensed code; see [LICENSE](https://github.com/arioberek/editkit-ts/blob/main/LICENSE)
+for the original copyright.

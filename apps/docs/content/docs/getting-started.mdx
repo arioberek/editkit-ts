@@ -1,0 +1,93 @@
+---
+title: Getting started
+description: Install editkit, parse your first edit, and run the offline example agent.
+---
+
+## Install
+
+```bash
+npm i editkit
+```
+
+Works with `pnpm add editkit` and `bun add editkit` too. ESM only, Node 18+.
+
+## First edit
+
+```ts
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+const llmOutput = `
+src/util.ts
+<<<<<<< SEARCH
+export const x = 1;
+=======
+export const x = 2;
+>>>>>>> REPLACE
+`;
+
+const results = await applyEdits(llmOutput, async (path) => {
+  return await readFile(path, "utf8");
+});
+
+for (const r of results) {
+  if (r.ok) {
+    await writeFile(r.path, r.after);
+    console.log(`✓ ${r.path}`);
+  } else {
+    console.error(`✗ ${r.path}: ${r.message}`);
+  }
+}
+```
+
+That's the whole loop: feed in the raw LLM text, hand it a file reader, write back the
+files that applied cleanly.
+
+## Streaming with the Vercel AI SDK
+
+```ts
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { streamEdits } from "editkit/ai-sdk";
+import { readFile, writeFile } from "node:fs/promises";
+
+const { textStream } = await streamText({
+  model: openai("gpt-4o"),
+  system: SEARCH_REPLACE_PROMPT, // see /docs/reference/system-prompts
+  prompt: "Refactor src/util.ts to use a class instead of free functions.",
+});
+
+for await (const { edit, result } of streamEdits(
+  textStream,
+  async (p) => readFile(p, "utf8"),
+)) {
+  if (result.ok) {
+    await writeFile(result.path, result.after);
+    console.log(`✓ applied ${edit.format} to ${result.path}`);
+  } else {
+    console.warn(`✗ ${result.path}: ${result.message}`);
+  }
+}
+```
+
+Each `{ edit, result }` yields as soon as its closing fence arrives — perfect for flickering
+each file's diff into a UI before the model finishes.
+
+## Examples
+
+The repo ships three runnable workspaces in [`examples/`](https://github.com/arioberek/editkit-ts/tree/main/examples):
+
+| Example | What it shows | Run |
+| ------- | ------------- | --- |
+| [`mini-coding-agent`](https://github.com/arioberek/editkit-ts/tree/main/examples/mini-coding-agent) | Full coding-agent loop: streaming, mixed formats, retry recovery. Offline. | `bun run --filter editkit-example-mini-coding-agent demo` |
+| [`agent-loop`](https://github.com/arioberek/editkit-ts/tree/main/examples/agent-loop) | Aider's canonical test-fix loop with a deterministic mock LLM. Offline. | `bun run --filter editkit-example-agent-loop demo` |
+| [`ai-sdk-v5`](https://github.com/arioberek/editkit-ts/tree/main/examples/ai-sdk-v5) | Smallest possible `streamEdits` demo against OpenAI. | `OPENAI_API_KEY=… bun run --filter editkit-example-ai-sdk-v5 demo` |
+
+**New users — start with [`mini-coding-agent`](https://github.com/arioberek/editkit-ts/tree/main/examples/mini-coding-agent).** No API key required.
+
+## Next
+
+- Pick an [edit format](/docs/concepts/edit-formats) for your use case.
+- Browse the [recipes](/docs/recipes/test-fix-loop) — likely one matches what you're building.
+- Read about [failure handling](/docs/reference/failure-handling) — structured errors are
+  how you build a reliable retry loop.

@@ -1,0 +1,44 @@
+---
+title: Live diff preview UI
+description: streamEdits yields each completed edit the moment its closing fence arrives. Flicker each file's diff into the UI before the model finishes.
+---
+
+The streaming model fits naturally into a websocket UI. Push each edit's diff to the
+client as soon as it's parseable, without waiting for the model to finish.
+
+```ts
+import { streamEdits } from "editkit/ai-sdk";
+import { diffLines } from "diff";
+
+for await (const { edit, result } of streamEdits(textStream, (p) => readFile(p, "utf8"))) {
+  if (!result.ok) {
+    ws.send({
+      type: "edit-error",
+      path: result.path,
+      reason: result.reason,
+      message: result.message,
+    });
+    continue;
+  }
+  ws.send({
+    type: "edit-preview",
+    path: result.path,
+    format: edit.format,
+    diff: diffLines(result.before, result.after),
+  });
+}
+```
+
+## What the user sees
+
+- Each file pops in as its closing fence arrives.
+- Failures (`search-not-found`, `ambiguous-match`) are first-class events — show them as
+  warnings inline, not as exceptions.
+- The diff is computed client-side from `before` / `after`, so you can use any diff
+  renderer (`react-diff-viewer`, `diff2html`, custom).
+
+## See it in action
+
+The [`mini-coding-agent` example](https://github.com/arioberek/editkit-ts/tree/main/examples/mini-coding-agent)
+uses the same pattern in a terminal UI: edits stream in, each one prints as it lands, and
+the agent shows the failure → retry flow.

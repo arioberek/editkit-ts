@@ -1,0 +1,43 @@
+---
+title: Bulk codemod across a directory
+description: One file, one model call, one commit. A bad pass becomes a single revert.
+---
+
+When you want every file in `src/**/*.ts` touched (e.g. adding JSDoc to every export),
+process them one at a time. A failed pass is a single `git revert` away.
+
+```ts
+import { glob } from "glob";
+import { $ } from "bun";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+for (const path of await glob("src/**/*.ts")) {
+  const source = await readFile(path, "utf8");
+  const { text } = await generateText({
+    model: openai("gpt-4o-mini"),
+    system: WHOLE_FILE_PROMPT,
+    prompt: `Add JSDoc to every exported symbol in ${path}:\n\n\`\`\`ts\n${source}\n\`\`\``,
+  });
+
+  const [r] = await applyEdits(text, { [path]: source }, { formats: ["whole-file"] });
+
+  if (r?.ok) {
+    await writeFile(path, r.after);
+    await $`git commit -am ${`docs: jsdoc for ${path}`}`;
+  }
+}
+```
+
+## Why `whole-file` here
+
+Codemods touch many spots in each file. `whole-file` is the cheapest format for that
+because the model rewrites the file as-is instead of trying to enumerate every change.
+Pair with a small/cheap model (`gpt-4o-mini` here).
+
+## Why one commit per file
+
+A bad transformation can be reverted with `git revert HEAD` without losing the rest of the
+batch. If you commit them all at once you have to manually un-apply the bad ones.

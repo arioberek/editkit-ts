@@ -1,0 +1,99 @@
+---
+title: Edit formats
+description: SEARCH/REPLACE blocks, unified diffs, and whole-file edits — what each does well, and when to pick which.
+---
+
+editkit supports the three formats real models actually emit. You can mix all three in one
+LLM response; editkit detects, parses, and applies them in source order.
+
+## SEARCH/REPLACE blocks
+
+```text
+PATH/TO/FILE
+<<<<<<< SEARCH
+...exact lines from the existing file...
+=======
+...what they should be replaced with...
+>>>>>>> REPLACE
+```
+
+- **Best default** for most coding-agent tasks.
+- Compact, focused, easy for small models to emit correctly.
+- The SEARCH section must be unique in the file — extend it with surrounding context if
+  the function appears multiple times.
+- Empty SEARCH = create a new file. Empty REPLACE = delete code.
+- Multiple blocks per response are fine; later edits to the same file see the earlier ones.
+
+## Unified diff
+
+```text
+--- a/PATH/TO/FILE
++++ b/PATH/TO/FILE
+@@ -OLD_START,OLD_LINES +NEW_START,NEW_LINES @@
+ unchanged context
+-removed line
++added line
+ unchanged context
+```
+
+- **Best for large refactors** with many small changes scattered across a file.
+- The diff structure stops the model from emitting `// ...rest unchanged` placeholders —
+  which is why it wins on framework-migration tasks like Next 13 → 15.
+- Three lines of context before and after each change.
+- Use `/dev/null` as the source path for file creation, or destination for deletion.
+
+## Whole-file
+
+````text
+PATH/TO/FILE
+```ts
+... full file contents ...
+```
+````
+
+- **Best for very small files** (under 50 lines) or smallest models.
+- The fence language (`ts`, `py`, etc.) is informational.
+- Output one fenced block per file. Don't omit any lines.
+
+## Mixing formats in one response
+
+```ts
+import { applyEdits } from "editkit";
+
+// LLM response can use all three formats at once:
+const results = await applyEdits(llmOutput, fileReader);
+```
+
+`detectFormats` only returns `whole-file` when no SEARCH/REPLACE or unified-diff markers
+are present. So a mixed response would silently drop the whole-file block under the default
+detector. **Pass `formats` explicitly when you want all three:**
+
+```ts
+const results = await applyEdits(llmOutput, fileReader, {
+  formats: ["search-replace", "unified-diff", "whole-file"],
+});
+```
+
+## Restricting to one format
+
+When you've prompted in one format and want hard-fails on the others:
+
+```ts
+const results = await applyEdits(llmOutput, files, {
+  formats: ["search-replace"],
+});
+```
+
+Anything that isn't a SEARCH/REPLACE block is ignored. If the model emits a unified diff
+anyway, you'll get zero results back and can re-prompt.
+
+## Picking a format
+
+| You're doing this... | Reach for... |
+| --- | --- |
+| A test-fix loop or coding agent | `search-replace` |
+| A bulk codemod over many files | `whole-file` (one prompt per file) |
+| A framework migration with multi-hunk changes | `unified-diff` |
+| A new-file scaffold | `whole-file`, or `search-replace` with empty SEARCH |
+| Architect/editor split | `search-replace` for the editor pass |
+| Whatever the model wants to emit | All three, with `formats: [...]` explicit |

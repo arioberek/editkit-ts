@@ -31,6 +31,9 @@ Full library docs: **[packages/editkit/README.md](./packages/editkit/README.md)*
 | Package                                  | Description                                          | Version                                                                                               |
 | ---------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | [`editkit`](./packages/editkit)          | The library. Parsers, applier, AI SDK adapter.       | [![npm](https://img.shields.io/npm/v/editkit.svg)](https://www.npmjs.com/package/editkit)             |
+| [`editkit-docs`](./apps/docs)            | Documentation site (Fumadocs + Next.js).             | private                                                                                               |
+
+📖 **[Read the docs →](https://editkit.vercel.app)**
 
 ## Examples
 
@@ -49,6 +52,8 @@ an API key.
 editkit-ts/
 ├── packages/
 │   └── editkit/             # the published library
+├── apps/
+│   └── docs/                # Fumadocs documentation site
 ├── examples/
 │   ├── agent-loop/
 │   ├── ai-sdk-v5/
@@ -72,6 +77,8 @@ bun run test           # turbo: run all package tests (cached)
 bun run typecheck      # turbo: typecheck all packages (cached)
 bun run lint           # biome: lint the whole repo
 bun run format         # biome: format the whole repo
+bun run docs           # next dev for the docs site
+bun run docs:build     # next build for the docs site
 ```
 
 Run a task for a single workspace with `--filter`:

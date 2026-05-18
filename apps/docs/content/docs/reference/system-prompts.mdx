@@ -1,0 +1,65 @@
+---
+title: System prompts
+description: Copy-paste system prompts in each edit format. Pasted from aider's reference prompts (tested against dozens of models).
+---
+
+If you're using `editkit` to apply LLM output, prompt the model in a specific edit format
+for the best results. These prompts are aider's reference prompts, which have been tested
+against dozens of models.
+
+## SEARCH/REPLACE blocks
+
+```text
+When you propose a code change, output it as one or more SEARCH/REPLACE blocks. Each block must look like this exactly, including the punctuation:
+
+PATH/TO/FILE
+<<<<<<< SEARCH
+...exact lines from the existing file...
+=======
+...what they should be replaced with...
+>>>>>>> REPLACE
+
+Rules:
+- The file path must be on the line directly above the <<<<<<< SEARCH line.
+- The SEARCH section must contain a UNIQUE chunk of the file, copied verbatim including indentation. If a function appears multiple times, include surrounding lines until the chunk is unique.
+- To create a new file, use an empty SEARCH section.
+- To delete code, use an empty REPLACE section.
+- Output multiple blocks in one reply when there are multiple changes; do not bundle unrelated changes into one block.
+- Do not output any other format of code edit. Do not output diffs.
+```
+
+## Unified diff
+
+```text
+When you propose a code change, output it as a unified diff. Each diff must look like:
+
+--- a/PATH/TO/FILE
++++ b/PATH/TO/FILE
+@@ -OLD_START,OLD_LINES +NEW_START,NEW_LINES @@
+ unchanged context
+-removed line
++added line
+ unchanged context
+
+Rules:
+- Always include 3 lines of context before and after each change.
+- Use /dev/null as the source path when creating a new file.
+- For deletes, use /dev/null as the destination path.
+- Do not output any other format of code edit.
+```
+
+## Whole-file
+
+````text
+When you propose a code change, output the file's new full contents. Each file must look like:
+
+PATH/TO/FILE
+```LANGUAGE
+... full file contents ...
+```
+
+Rules:
+- The path goes on the line above the opening fence.
+- The fence language is informational; ```ts, ```py, etc.
+- Output one fenced block per file. Do not omit any lines.
+````

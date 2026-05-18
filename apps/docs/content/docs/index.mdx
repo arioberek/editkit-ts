@@ -1,0 +1,80 @@
+---
+title: Introduction
+description: Robust LLM edit-format toolkit for TypeScript. Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits with battle-tested fuzzy matching ported from aider.
+---
+
+`editkit` is a TypeScript toolkit for applying the edits an LLM emits to your local files.
+It ports [aider](https://github.com/paul-gauthier/aider)'s edit-format design to a clean
+public API and ships an adapter for the Vercel AI SDK, so you can stop rewriting
+"search/replace block parser" for the third time.
+
+## Why this exists
+
+Every TS coding agent today (Continue, Cline, Mastra, custom AI SDK apps) ends up
+reinventing the same logic: take an LLM's response, find the edits inside it, and apply
+them to local files. Aider has the most battle-tested implementation in any language — it
+just happens to be Python.
+
+`editkit` is that logic, in TypeScript, exported as a library.
+
+## Three edit formats
+
+| Format            | When to use it                                                  |
+| ----------------- | --------------------------------------------------------------- |
+| `search-replace`  | Default for any model. Compact, focused, easy for small models. |
+| `unified-diff`    | Best for large refactors and multi-hunk changes.                |
+| `whole-file`      | Smallest models, or files < 50 lines.                           |
+
+[Read about the formats →](/docs/concepts/edit-formats)
+
+## What it handles
+
+- **Indent-shift fuzzy matching** — when the model dropped the indentation of a nested
+  block, the search still locates it and the replace is re-indented to fit.
+- **Trailing-whitespace tolerance** — finds matches when the file has trailing spaces the
+  model didn't quote.
+- **Hunk drift** — unified diffs locate their target even when line numbers are off.
+- **Overlay semantics** — multiple edits to the same file see each other's output, in
+  source order.
+- **Structured failures** — every failure has a `reason` code and a model-readable
+  `message` you can pipe back into a retry prompt.
+
+Zero runtime dependencies. ESM-only. Node 18+.
+
+## Quick start
+
+```bash
+npm i editkit
+# or: pnpm add editkit / bun add editkit
+```
+
+```ts
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+const results = await applyEdits(llmOutput, async (path) => {
+  return await readFile(path, "utf8");
+});
+
+for (const r of results) {
+  if (r.ok) {
+    await writeFile(r.path, r.after);
+  } else {
+    console.error(`✗ ${r.path}: ${r.message}`);
+  }
+}
+```
+
+[Full getting-started guide →](/docs/getting-started)
+
+## Next steps
+
+- [Run a working example](/docs/getting-started#examples) — three workspace packages, one
+  runs offline with no API key.
+- [Recipes](/docs/recipes/test-fix-loop) — ten real-world patterns: test-fix loops, bulk
+  codemods, multi-file refactors, PR review bots, Slack bots, framework migrations, and
+  more.
+- [Edit formats](/docs/concepts/edit-formats) — when to use SEARCH/REPLACE vs unified diff
+  vs whole-file, and the trade-offs.
+- [System prompts](/docs/reference/system-prompts) — the exact prompts aider uses, ported
+  for you to copy.

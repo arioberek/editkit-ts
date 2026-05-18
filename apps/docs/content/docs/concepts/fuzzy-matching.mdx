@@ -1,0 +1,77 @@
+---
+title: Fuzzy matching
+description: How editkit locates a SEARCH block when the model's quote drifted from the file.
+---
+
+The applier doesn't require byte-exact matches. It runs three strategies in order; the
+first one to match wins.
+
+## Strategy 1: exact match
+
+If the SEARCH text appears verbatim in the file exactly once, use that. Fast, always
+correct, no fuzzing.
+
+## Strategy 2: indent-shift
+
+Drop a common leading-whitespace prefix from every SEARCH line, search for that, and
+re-apply the file's actual indentation to the REPLACE. This handles the very common case
+where the model quoted a nested block with no indentation:
+
+```ts
+// File has:
+function outer() {
+  function inner() {
+    return 42;
+  }
+}
+
+// Model emits:
+<<<<<<< SEARCH
+function inner() {
+  return 42;
+}
+=======
+function inner() {
+  return 43;
+}
+>>>>>>> REPLACE
+```
+
+The SEARCH lacks the four-space indent that's actually in the file, but `editkit` still
+locates the block and indents the REPLACE to match.
+
+## Strategy 3: trim trailing whitespace
+
+Strip trailing spaces from every line on both sides, then exact-match. Handles files where
+the editor left trailing whitespace the model didn't quote.
+
+## Use `fuzzyReplace` directly
+
+The matching primitive is exposed if you want it without the parsing layer:
+
+```ts
+import { fuzzyReplace } from "editkit";
+
+const out = fuzzyReplace(originalFileText, searchText, replaceText, {
+  fuzzyWhitespace: true, // default
+});
+
+// Result shapes:
+// { kind: "ok", text, strategy: "exact" | "indent-shift" | "trim-eol" }
+// { kind: "ambiguous", count: 3 }
+// { kind: "not-found" }
+```
+
+## Turning fuzzing off
+
+Pass `{ fuzzyWhitespace: false }` to `applyEdits` if you want strict byte-exact matching.
+Useful when you're applying machine-generated diffs and want any drift to be a hard error
+(rather than silently picked up by a fuzzy strategy).
+
+## Ambiguous matches
+
+If the SEARCH block appears more than once in the file, fuzzing won't pick for you — you'll
+get `ambiguous-match` back as a failure. The fix is in the model's hands: re-prompt asking
+for additional surrounding context to make the SEARCH unique. The error message editkit
+returns is already written to be model-readable; feed it straight back into the next
+prompt.

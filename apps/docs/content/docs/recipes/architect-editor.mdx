@@ -1,0 +1,44 @@
+---
+title: Architect / editor split
+description: Strong reasoning model writes the plan. Cheap fast editor model turns the plan into edit blocks. Doubles diff-format pass rates on aider's hard tasks.
+---
+
+Two-model pipeline: an expensive reasoning model (Claude Opus, o3) sketches the diff in
+prose; a cheap fast editor model (`gpt-4o-mini`) turns the plan into edit blocks, seeing
+only the plan and the file (never the user prompt).
+
+On aider's benchmarks, this approach doubled diff-format pass rates for hard tasks.
+
+```ts
+import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { applyEdits } from "editkit";
+import { readFile } from "node:fs/promises";
+
+const file = await readFile("src/auth.ts", "utf8");
+
+const { text: plan } = await generateText({
+  model: anthropic("claude-opus-4-7"),
+  prompt: `Sketch the diff for adding OAuth alongside email auth in src/auth.ts. List the exact functions to add, change, or remove.\n\n\`\`\`ts\n${file}\n\`\`\``,
+});
+
+const { text: edits } = await generateText({
+  model: openai("gpt-4o-mini"),
+  system: SEARCH_REPLACE_PROMPT,
+  prompt: `Turn this plan into SEARCH/REPLACE blocks for src/auth.ts:\n\n${plan}\n\n\`\`\`ts\n${file}\n\`\`\``,
+});
+
+const results = await applyEdits(edits, { "src/auth.ts": file });
+```
+
+## Why two models
+
+The reasoning model isn't great at quoting exact lines. The editor model isn't great at
+deciding what to change. Splitting the job plays to both strengths.
+
+## Why the editor only sees the plan + file
+
+The user prompt may contain ambiguity, conversational hedges, or instructions the editor
+shouldn't try to interpret. The architect already collapsed those into a deterministic
+plan. The editor just transcribes.

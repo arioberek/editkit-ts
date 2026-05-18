@@ -1,0 +1,99 @@
+---
+title: Streaming
+description: Apply edits as the model emits them, file by file, instead of waiting for the whole response.
+---
+
+`streamEdits` (in `editkit/ai-sdk`) takes any `AsyncIterable<string>` of text chunks and
+yields each completed edit as soon as its closing fence has streamed in. The same overlay
+semantics as `applyEdits` apply — consecutive edits to the same file see each other's
+output.
+
+## Basic usage
+
+```ts
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { streamEdits } from "editkit/ai-sdk";
+import { readFile, writeFile } from "node:fs/promises";
+
+const { textStream } = await streamText({
+  model: openai("gpt-4o"),
+  system: SEARCH_REPLACE_PROMPT,
+  prompt: "Refactor src/util.ts to use a class.",
+});
+
+for await (const { edit, result } of streamEdits(textStream, async (p) =>
+  readFile(p, "utf8"),
+)) {
+  if (result.ok) {
+    await writeFile(result.path, result.after);
+  }
+}
+```
+
+## What "complete" means
+
+- **search-replace**: closing `>>>>>>> REPLACE` fence has arrived.
+- **whole-file**: closing code fence has arrived.
+- **unified-diff**: the body is followed by a "boundary" — another file header or a blank
+  line. Until then editkit waits, because the model may still be streaming hunks.
+
+This means a unified-diff edit can hang at end-of-stream if the model never emits a
+trailing newline. `streamEdits` flushes anything not yet emitted when the stream closes, so
+you'll still get the last edit — just delivered all at once instead of mid-stream.
+
+## Works with any AsyncIterable
+
+No hard dependency on the `ai` package. Pass anything that yields strings:
+
+```ts
+// raw fetch SSE
+async function* readSSE(response: Response) {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    yield decoder.decode(value);
+  }
+}
+
+for await (const { edit, result } of streamEdits(readSSE(response), files)) {
+  // ...
+}
+```
+
+## Memory considerations
+
+`streamEdits` keeps the whole response in a buffer to support fuzzy-fence detection. For
+100k+ token responses, drop to `applyEditsFromText` and re-parse at end-of-stream.
+
+## Live diff preview UI
+
+The streaming model lets you flicker each file's diff into the UI before the model
+finishes:
+
+```ts
+import { streamEdits } from "editkit/ai-sdk";
+import { diffLines } from "diff";
+
+for await (const { edit, result } of streamEdits(textStream, fileReader)) {
+  if (!result.ok) {
+    ws.send({
+      type: "edit-error",
+      path: result.path,
+      reason: result.reason,
+      message: result.message,
+    });
+    continue;
+  }
+  ws.send({
+    type: "edit-preview",
+    path: result.path,
+    format: edit.format,
+    diff: diffLines(result.before, result.after),
+  });
+}
+```
+
+See the [live-diff-preview recipe](/docs/recipes/live-diff-preview) for the full pattern.

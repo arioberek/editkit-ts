@@ -1,0 +1,42 @@
+---
+title: Cross-language port (file creation)
+description: Whole-file with `allowCreate` handles new paths. Useful for language ports, scaffolding generators, "explain this and write the test" prompts.
+---
+
+`applyEdits` with `allowCreate: true` (the default) handles new files. Pair with the
+`whole-file` format and you've got a one-shot scaffolder.
+
+```ts
+const py = await readFile("src/parser.py", "utf8");
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: WHOLE_FILE_PROMPT,
+  prompt: `Port this Python module to Rust. Output as src/parser.rs:\n\n\`\`\`py\n${py}\n\`\`\``,
+});
+const [r] = await applyEdits(text, async () => null, { formats: ["whole-file"] });
+if (r?.ok) await writeFile(r.path, r.after);
+```
+
+## Why the file reader returns `null`
+
+The target file (`src/parser.rs`) doesn't exist yet. Returning `null` from the file reader
+tells the applier to treat this as a create. With `allowCreate: true` (default), the
+applier accepts it; with `allowCreate: false`, you get `missing-original` back.
+
+## Creating multiple files in one response
+
+Same pattern — the model emits one fenced block per file:
+
+```text
+src/foo.rs
+```rs
+... contents ...
+```
+
+src/bar.rs
+```rs
+... contents ...
+```
+```
+
+Both files are created. Order in the response = order they're applied.

@@ -59,10 +59,10 @@ export function fuzzyReplace(
 function countOccurrences(haystack: string, needle: string): number {
   if (needle === "") return 0;
   let count = 0;
-  let idx = 0;
-  while ((idx = haystack.indexOf(needle, idx)) !== -1) {
+  let idx = haystack.indexOf(needle);
+  while (idx !== -1) {
     count++;
-    idx += needle.length;
+    idx = haystack.indexOf(needle, idx + needle.length);
   }
   return count;
 }
@@ -76,11 +76,7 @@ function countOccurrences(haystack: string, needle: string): number {
  * whitespace of the matched region in the original is then prepended to every
  * non-blank line of `replace` to produce the patched output.
  */
-function tryIndentShift(
-  original: string,
-  search: string,
-  replace: string,
-): FuzzyReplaceResult {
+function tryIndentShift(original: string, search: string, replace: string): FuzzyReplaceResult {
   const searchLines = search.split("\n");
   const replaceLines = replace.split("\n");
 
@@ -138,18 +134,12 @@ function tryIndentShift(
   const before = originalLines.slice(0, startLine).join("\n");
   const after = originalLines.slice(startLine + dedentedSearch.length).join("\n");
   const text =
-    (before === "" ? "" : `${before}\n`) +
-    reindentedReplace +
-    (after === "" ? "" : `\n${after}`);
+    (before === "" ? "" : `${before}\n`) + reindentedReplace + (after === "" ? "" : `\n${after}`);
   return { kind: "ok", text, strategy: "indent-shift" };
 }
 
 /** Strategy 3: trim trailing whitespace on every line, then exact-match. */
-function tryTrimEol(
-  original: string,
-  search: string,
-  replace: string,
-): FuzzyReplaceResult {
+function tryTrimEol(original: string, search: string, replace: string): FuzzyReplaceResult {
   const trimRight = (s: string) => s.replace(/[ \t]+$/gm, "");
   const trimmedOrig = trimRight(original);
   const trimmedSearch = trimRight(search);

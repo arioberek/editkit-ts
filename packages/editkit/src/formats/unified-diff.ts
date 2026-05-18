@@ -77,12 +77,7 @@ export function parseUnifiedDiff(input: string): UnifiedDiffEdit[] {
         // Hunk lines must start with ' ', '+', '-', or '\' (no-newline marker).
         // Empty lines are tolerated only if they're surrounded by hunk lines (some tools
         // emit a bare empty line for an empty context line). We do this by peeking ahead.
-        if (
-          bl.startsWith(" ") ||
-          bl.startsWith("+") ||
-          bl.startsWith("-") ||
-          bl.startsWith("\\")
-        ) {
+        if (bl.startsWith(" ") || bl.startsWith("+") || bl.startsWith("-") || bl.startsWith("\\")) {
           body.push(bl);
           i++;
           continue;
@@ -91,11 +86,7 @@ export function parseUnifiedDiff(input: string): UnifiedDiffEdit[] {
           // Look ahead — if the next line continues the hunk, treat this as an empty
           // context line. Otherwise we're at the end of the hunk (a trailing newline).
           const peek = lines[i + 1] ?? "";
-          if (
-            peek.startsWith(" ") ||
-            peek.startsWith("+") ||
-            peek.startsWith("-")
-          ) {
+          if (peek.startsWith(" ") || peek.startsWith("+") || peek.startsWith("-")) {
             body.push(bl);
             i++;
             continue;
@@ -215,9 +206,7 @@ function applyHunk(
   if (candidate === -1) {
     return {
       kind: "fail",
-      reason:
-        `Hunk @@-${hunk.oldStart}@@ context not found. ` +
-        "The model's diff may be against a different version of the file.",
+      reason: `Hunk @@-${hunk.oldStart}@@ context not found. The model's diff may be against a different version of the file.`,
     };
   }
   const before = lines.slice(0, candidate);
@@ -258,10 +247,6 @@ function detectLineEnding(s: string): string {
   return s.includes("\r\n") ? "\r\n" : "\n";
 }
 
-function failure(
-  edit: UnifiedDiffEdit,
-  reason: ApplyFailureReason,
-  message: string,
-): ApplyResult {
+function failure(edit: UnifiedDiffEdit, reason: ApplyFailureReason, message: string): ApplyResult {
   return { ok: false, path: edit.path, reason, message, edit };
 }

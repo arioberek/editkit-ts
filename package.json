@@ -1,60 +1,20 @@
 {
-  "name": "editkit",
-  "version": "0.1.1",
-  "description": "Robust LLM edit-format toolkit for TypeScript. Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits — battle-tested fuzzy matching ported from aider.",
-  "keywords": [
-    "llm",
-    "ai",
-    "ai-sdk",
-    "vercel-ai-sdk",
-    "anthropic",
-    "openai",
-    "claude",
-    "coding-agent",
-    "code-edit",
-    "codemod",
-    "codegen",
-    "search-replace",
-    "unified-diff",
-    "whole-file",
-    "diff",
-    "patch",
-    "edit",
-    "apply",
-    "aider",
-    "cursor",
-    "cline",
-    "continue",
-    "mastra",
-    "fuzzy-match",
-    "streaming",
-    "typescript"
-  ],
+  "name": "editkit-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo for editkit — robust LLM edit-format toolkit for TypeScript.",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./ai-sdk": {
-      "types": "./dist/ai-sdk.d.ts",
-      "import": "./dist/ai-sdk.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "workspaces": ["packages/*", "examples/*"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
     "format": "biome format --write .",
-    "lint": "biome check ."
+    "clean": "turbo run clean && rm -rf node_modules",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "turbo run build --filter=editkit && changeset publish"
   },
   "license": "MIT",
   "author": "Arielton Oberek <contact@arielton.com>",
@@ -71,8 +31,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.10",
     "@types/bun": "^1.1.13",
     "@types/node": "^22.10.0",
+    "turbo": "^2.3.3",
     "typescript": "^5.7.2"
-  }
+  },
+  "packageManager": "bun@1.1.38"
 }

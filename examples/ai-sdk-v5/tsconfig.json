@@ -1,4 +1,4 @@
 {
   "extends": "../../packages/editkit/tsconfig.json",
-  "include": ["src/**/*", "test/**/*"]
+  "include": ["example.ts", "sample.ts"]
 }

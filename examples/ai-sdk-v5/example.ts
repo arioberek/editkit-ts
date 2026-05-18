@@ -1,3 +1,6 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 /**
  * Run with: OPENAI_API_KEY=sk-... bun run example.ts
  *
@@ -5,9 +8,6 @@
  */
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
-import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { streamEdits } from "editkit/ai-sdk";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,9 +38,8 @@ ${sample}
 \`\`\``,
   });
 
-  for await (const { edit, result } of streamEdits(
-    textStream,
-    async (path) => readFile(path, "utf8"),
+  for await (const { edit, result } of streamEdits(textStream, async (path) =>
+    readFile(path, "utf8"),
   )) {
     if (result.ok) {
       await writeFile(result.path, result.after);

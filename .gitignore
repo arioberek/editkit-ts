@@ -1,8 +1,10 @@
 node_modules
 dist
+.turbo
 .DS_Store
 *.log
 .firecrawl
 .env
 .env.local
 coverage
+.changeset/pre.json

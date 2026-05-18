@@ -64,7 +64,8 @@ describe("applyEdits — unified-diff", () => {
 `;
     const out = applyEditsSync(input, { "f.ts": original });
     expect(out[0]?.ok).toBe(true);
-    if (out[0]?.ok) expect(out[0].after).toBe("head1\nhead2\nhead3\nhead4\nalpha\nBETA\ngamma\ntail\n");
+    if (out[0]?.ok)
+      expect(out[0].after).toBe("head1\nhead2\nhead3\nhead4\nalpha\nBETA\ngamma\ntail\n");
   });
 
   it("creates a new file when /dev/null is the source", () => {

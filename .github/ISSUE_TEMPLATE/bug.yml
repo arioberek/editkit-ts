@@ -1,0 +1,60 @@
+name: Bug report
+description: editkit produced the wrong output, crashed, or behaved differently than the README says.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Adversarial fixtures are how this library got robust
+        — your reproduction is the most valuable thing you can give us.
+
+  - type: input
+    id: version
+    attributes:
+      label: editkit version
+      description: From `cat node_modules/editkit/package.json | grep version` or `npm list editkit`.
+      placeholder: e.g. 0.1.1
+    validations:
+      required: true
+
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime
+      description: Node, Bun, Deno + version.
+      placeholder: e.g. Node 22.10.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Paste the smallest code snippet that reproduces the issue. Include the input string,
+        the call site, and the file map / file reader you used.
+      render: typescript
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: e.g. "All three SEARCH/REPLACE blocks should apply with `ok: true`."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Paste the full `ApplyResult[]` (or error message) you got back.
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context (optional)
+      description: Which model produced this output? Any environmental quirks? Links to upstream aider behavior?

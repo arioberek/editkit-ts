@@ -1,0 +1,73 @@
+{
+  "name": "editkit",
+  "version": "0.1.1",
+  "description": "Robust LLM edit-format toolkit for TypeScript. Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits — battle-tested fuzzy matching ported from aider.",
+  "keywords": [
+    "llm",
+    "ai",
+    "ai-sdk",
+    "vercel-ai-sdk",
+    "anthropic",
+    "openai",
+    "claude",
+    "coding-agent",
+    "code-edit",
+    "codemod",
+    "codegen",
+    "search-replace",
+    "unified-diff",
+    "whole-file",
+    "diff",
+    "patch",
+    "edit",
+    "apply",
+    "aider",
+    "cursor",
+    "cline",
+    "continue",
+    "mastra",
+    "fuzzy-match",
+    "streaming",
+    "typescript"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ai-sdk": {
+      "types": "./dist/ai-sdk.d.ts",
+      "import": "./dist/ai-sdk.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "bun test tests/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT",
+  "author": "Arielton Oberek <contact@arielton.com>",
+  "homepage": "https://github.com/arioberek/editkit-ts/tree/main/packages/editkit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arioberek/editkit-ts.git",
+    "directory": "packages/editkit"
+  },
+  "bugs": {
+    "url": "https://github.com/arioberek/editkit-ts/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

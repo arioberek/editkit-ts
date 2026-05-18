@@ -23,18 +23,10 @@
  */
 
 import { detectFormats } from "./detect.ts";
-import {
-  applySearchReplace,
-  parseSearchReplace,
-} from "./formats/search-replace.ts";
+import { applySearchReplace, parseSearchReplace } from "./formats/search-replace.ts";
 import { applyUnifiedDiff, parseUnifiedDiff } from "./formats/unified-diff.ts";
 import { applyWholeFile, parseWholeFile } from "./formats/whole-file.ts";
-import type {
-  ApplyOptions,
-  ApplyResult,
-  FileReader,
-  ParsedEdit,
-} from "./types.ts";
+import type { ApplyOptions, ApplyResult, FileReader, ParsedEdit } from "./types.ts";
 
 export { applyEdits as applyEditsFromText } from "./index.ts";
 
@@ -79,7 +71,10 @@ export async function* streamEdits(
   if (tail.trim() === "") return;
 
   const fmts =
-    options.formats ?? (detectFormats(tail).length > 0 ? detectFormats(tail) : ["search-replace", "unified-diff", "whole-file"]);
+    options.formats ??
+    (detectFormats(tail).length > 0
+      ? detectFormats(tail)
+      : ["search-replace", "unified-diff", "whole-file"]);
   const finalEdits: ParsedEdit[] = [];
   if (fmts.includes("search-replace")) finalEdits.push(...parseSearchReplace(tail));
   if (fmts.includes("unified-diff")) finalEdits.push(...parseUnifiedDiff(tail));
@@ -144,11 +139,7 @@ function isUnifiedDiffComplete(slice: string, end: number): boolean {
   return false;
 }
 
-function applyOne(
-  edit: ParsedEdit,
-  original: string | null,
-  options: ApplyOptions,
-): ApplyResult {
+function applyOne(edit: ParsedEdit, original: string | null, options: ApplyOptions): ApplyResult {
   if (edit.format === "search-replace") return applySearchReplace(edit, original, options);
   if (edit.format === "unified-diff") return applyUnifiedDiff(edit, original, options);
   return applyWholeFile(edit, original, options);

@@ -17,8 +17,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyEdits } from "../../src/index.ts";
-import type { ApplyResult } from "../../src/index.ts";
+import { applyEdits } from "editkit";
+import type { ApplyResult } from "editkit";
 
 const BUGGY_SOURCE = `export function add(a: number, b: number) {
   return a - b;

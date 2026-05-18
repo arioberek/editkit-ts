@@ -1,21 +1,17 @@
 {
-  "name": "editkit-example-mini-coding-agent",
+  "name": "editkit-example-agent-loop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "demo": "bun run src/demo.ts",
-    "demo:live": "EDITKIT_DEMO_MODE=live bun run src/demo.ts",
-    "test": "bun test test/",
+    "demo": "bun run run.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "editkit": "workspace:*"
   },
   "devDependencies": {
-    "@ai-sdk/openai": "^3.0.63",
     "@types/bun": "^1.1.13",
-    "ai": "^6.0.182",
     "typescript": "^5.7.2"
   }
 }

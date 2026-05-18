@@ -37,14 +37,16 @@ Without editkit, the things this example does for you would each be a small proj
 ## Run the demo (offline, no API key)
 
 ```bash
-# Once, at the repo root, build editkit so the example can import from dist/:
-cd /path/to/editkit-ts
+# Once, at the repo root: install workspaces and build editkit:
+bun install
 bun run build
 
-# Then in this directory:
+# Then run the demo from this directory:
 cd examples/mini-coding-agent
-bun install
 bun run demo
+
+# Or, from the repo root:
+bun run --filter editkit-example-mini-coding-agent demo
 ```
 
 You'll see two scenarios run end-to-end:
@@ -104,8 +106,8 @@ and a clean round 2.
 ```
 examples/mini-coding-agent/
 ├── README.md
-├── package.json              # private; depends on editkit via file:../..
-├── tsconfig.json             # extends ../../tsconfig.json
+├── package.json              # private; depends on editkit via workspace:*
+├── tsconfig.json             # extends ../../packages/editkit/tsconfig.json
 ├── target/                   # the small fake codebase the agent edits
 │   └── src/
 │       ├── store.ts          # in-memory KV store with a TODO marker

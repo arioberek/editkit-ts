@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "arioberek/editkit-ts" }],
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "editkit-example-agent-loop",
+    "editkit-example-ai-sdk-v5",
+    "editkit-example-mini-coding-agent"
+  ],
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  }
+}

@@ -1,12 +1,10 @@
 {
-  "name": "editkit-example-mini-coding-agent",
+  "name": "editkit-example-ai-sdk-v5",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "demo": "bun run src/demo.ts",
-    "demo:live": "EDITKIT_DEMO_MODE=live bun run src/demo.ts",
-    "test": "bun test test/",
+    "demo": "bun run example.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

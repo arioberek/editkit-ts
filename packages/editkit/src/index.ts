@@ -1,17 +1,8 @@
 import { detectFormats } from "./detect.ts";
-import {
-  applySearchReplace,
-  parseSearchReplace,
-} from "./formats/search-replace.ts";
+import { applySearchReplace, parseSearchReplace } from "./formats/search-replace.ts";
 import { applyUnifiedDiff, parseUnifiedDiff } from "./formats/unified-diff.ts";
 import { applyWholeFile, parseWholeFile } from "./formats/whole-file.ts";
-import type {
-  ApplyOptions,
-  ApplyResult,
-  EditFormat,
-  FileReader,
-  ParsedEdit,
-} from "./types.ts";
+import type { ApplyOptions, ApplyResult, EditFormat, FileReader, ParsedEdit } from "./types.ts";
 
 export type {
   ApplyFailureReason,
@@ -41,10 +32,7 @@ export { parseWholeFile } from "./formats/whole-file.ts";
  * detect formats heuristically and parse each. Edits are returned in the order they appear
  * in the source text, sorted by `range.start`.
  */
-export function parseEdits(
-  input: string,
-  options: { formats?: EditFormat[] } = {},
-): ParsedEdit[] {
+export function parseEdits(input: string, options: { formats?: EditFormat[] } = {}): ParsedEdit[] {
   const formats = options.formats ?? defaultFormats(input);
   const all: ParsedEdit[] = [];
   for (const fmt of formats) {
@@ -95,11 +83,7 @@ export async function applyEdits(
   return results;
 }
 
-function applyOne(
-  edit: ParsedEdit,
-  original: string | null,
-  options: ApplyOptions,
-): ApplyResult {
+function applyOne(edit: ParsedEdit, original: string | null, options: ApplyOptions): ApplyResult {
   if (edit.format === "search-replace") return applySearchReplace(edit, original, options);
   if (edit.format === "unified-diff") return applyUnifiedDiff(edit, original, options);
   return applyWholeFile(edit, original, options);

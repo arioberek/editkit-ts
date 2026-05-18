@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a new edit format, option, helper, or recipe.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. The bar for new public API is "real users would
+        otherwise have to reinvent this." A use case in the description helps a lot.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the use case, not the proposed solution. e.g. "I have a Claude integration
+        that emits aider's `udiff-simple` format and editkit's `unified-diff` parser rejects
+        it" beats "please add a `udiff-simple` parser".
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How are you (or could you) solve this today, without editkit changing? This helps us judge urgency.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior (optional)
+      description: |
+        If you have a sketch — a function signature, an option name, an example call — paste
+        it here. Pseudocode is fine.
+      render: typescript
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Other approaches you thought about and why they didn't fit.

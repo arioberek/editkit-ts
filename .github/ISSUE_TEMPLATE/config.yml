@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/arioberek/editkit-ts/discussions
+    about: For questions, ideas, and recipes that aren't bugs or feature requests.
+  - name: Security vulnerability
+    url: https://github.com/arioberek/editkit-ts/security/policy
+    about: Please don't file public issues for security problems — see SECURITY.md.

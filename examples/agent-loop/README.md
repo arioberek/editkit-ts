@@ -4,7 +4,13 @@ Reproduces aider's canonical test-fix loop end-to-end with a deterministic mock 
 runs without an API key and without flake.
 
 ```bash
-bun run examples/agent-loop/run.ts
+# from the repo root:
+bun install
+bun run --filter editkit-example-agent-loop demo
+
+# or directly:
+cd examples/agent-loop
+bun run demo
 ```
 
 What it does:

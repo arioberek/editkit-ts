@@ -103,8 +103,7 @@ new
   });
 
   it("applies five sequential edits to the same file in source order", () => {
-    const make = (i: number) =>
-      `f.ts\n<<<<<<< SEARCH\n${i}\n=======\n${i + 1}\n>>>>>>> REPLACE\n`;
+    const make = (i: number) => `f.ts\n<<<<<<< SEARCH\n${i}\n=======\n${i + 1}\n>>>>>>> REPLACE\n`;
     const input = [0, 1, 2, 3, 4].map(make).join("\n");
     const out = applyEditsSync(input, { "f.ts": "0\n" });
     expect(out.every((r) => r.ok)).toBe(true);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { applyEditsSync, parseSearchReplace } from "../src/index.ts";
 import { fuzzyReplace } from "../src/apply/fuzzy.ts";
+import { applyEditsSync, parseSearchReplace } from "../src/index.ts";
 
 describe("parseSearchReplace", () => {
   it("parses a single block with the path on the line above", () => {

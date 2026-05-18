@@ -1,10 +1,5 @@
-import type {
-  ApplyFailureReason,
-  ApplyOptions,
-  ApplyResult,
-  SearchReplaceEdit,
-} from "../types.ts";
 import { fuzzyReplace } from "../apply/fuzzy.ts";
+import type { ApplyFailureReason, ApplyOptions, ApplyResult, SearchReplaceEdit } from "../types.ts";
 
 /**
  * Parser & applier for aider's `SEARCH/REPLACE` block format.
@@ -87,9 +82,10 @@ export function parseSearchReplace(input: string): SearchReplaceEdit[] {
     const path = b.pathHint ?? findPathBefore(input, b.range.start) ?? findPathInside(b.search);
     if (!path) {
       throw new Error(
-        `SEARCH/REPLACE block at offset ${b.range.start} has no associated path. ` +
+        `SEARCH/REPLACE block at offset ${b.range.start} has no associated path. ${
           "Place the file path on the line directly before <<<<<<< SEARCH, " +
-          "or include it as the first line of the SEARCH block.",
+          "or include it as the first line of the SEARCH block."
+        }`,
       );
     }
     // If the path was found *inside* the search content (aider-compatible), strip it from
@@ -196,8 +192,7 @@ export function applySearchReplace(
     return failure(
       edit,
       "missing-original",
-      `File ${edit.path} not found in the provided FileReader. ` +
-        "Pass it in or use an empty SEARCH block to create the file.",
+      `File ${edit.path} not found in the provided FileReader. Pass it in or use an empty SEARCH block to create the file.`,
     );
   }
 
@@ -209,17 +204,14 @@ export function applySearchReplace(
     return failure(
       edit,
       "search-not-found",
-      `Could not locate the SEARCH block in ${edit.path}. ` +
-        "The model may be quoting stale code, or whitespace differs. " +
-        "Inspect the file and re-prompt with the exact current content.",
+      `Could not locate the SEARCH block in ${edit.path}. The model may be quoting stale code, or whitespace differs. Inspect the file and re-prompt with the exact current content.`,
     );
   }
   if (result.kind === "ambiguous") {
     return failure(
       edit,
       "ambiguous-match",
-      `SEARCH block matched ${result.count} locations in ${edit.path}. ` +
-        "Make the SEARCH block more specific by including additional surrounding context.",
+      `SEARCH block matched ${result.count} locations in ${edit.path}. Make the SEARCH block more specific by including additional surrounding context.`,
     );
   }
 

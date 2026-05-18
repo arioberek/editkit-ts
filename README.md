@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/editkit?label=minzip)](https://bundlephobia.com/package/editkit)
 
-Monorepo for **editkit** — a robust LLM edit-format toolkit for TypeScript. Parse and apply
+**editkit** — a robust LLM edit-format toolkit for TypeScript. Parse and apply
 `SEARCH/REPLACE` blocks, unified diffs, and whole-file edits with battle-tested fuzzy
 matching ported from [aider](https://github.com/paul-gauthier/aider).
 

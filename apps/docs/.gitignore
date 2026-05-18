@@ -4,3 +4,4 @@ next-env.d.ts
 out
 node_modules
 .turbo
+*.tsbuildinfo

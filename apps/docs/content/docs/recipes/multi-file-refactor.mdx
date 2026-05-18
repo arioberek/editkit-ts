@@ -1,0 +1,45 @@
+---
+title: Multi-file refactor
+description: Add a flag, thread it through every call site. SEARCH/REPLACE handles N files in one response and applies them in source order.
+---
+
+Add `--verbose` and thread it through every call site. SEARCH/REPLACE handles N files in
+one response and applies them in source order, so later edits to the same file see the
+earlier ones (overlay semantics).
+
+```ts
+const FILES = ["src/cli.ts", "src/config.ts", "src/runner.ts", "src/log.ts"];
+const contents = Object.fromEntries(
+  await Promise.all(FILES.map(async (p) => [p, await readFile(p, "utf8")] as const)),
+);
+
+const fileSection = FILES.map((p) => `### ${p}\n\`\`\`ts\n${contents[p]}\n\`\`\``).join(
+  "\n\n",
+);
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: SEARCH_REPLACE_PROMPT,
+  prompt: `Add a --verbose flag and thread it through every file below.\n\n${fileSection}`,
+});
+
+const results = await applyEdits(text, contents);
+const conflicts = results.filter((r) => !r.ok);
+if (conflicts.length) {
+  for (const c of conflicts) console.error(`✗ ${c.path}: ${c.message}`);
+  process.exit(1);
+}
+for (const r of results) if (r.ok) await writeFile(r.path, r.after);
+```
+
+## Why pre-load all files
+
+The model needs to see every file it might touch in the same prompt to make consistent
+choices (same option name, same default value, same wrapping helper). Pre-loading and
+including them in the prompt body is the only reliable way.
+
+## All-or-nothing semantics
+
+Because we collect results before writing, you can roll back at the prompt level: if any
+edit failed, write nothing and re-prompt. This avoids the half-applied state where two of
+four files have the new flag and two don't.

@@ -19,8 +19,12 @@
       "**/dist",
       "**/node_modules",
       "**/.turbo",
+      "**/.next",
+      "**/.source",
+      "**/next-env.d.ts",
       "examples/mini-coding-agent/target",
-      "examples/mini-coding-agent/fixtures"
+      "examples/mini-coding-agent/fixtures",
+      "apps/docs/content"
     ]
   }
 }

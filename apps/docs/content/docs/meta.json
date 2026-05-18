@@ -1,0 +1,27 @@
+{
+  "title": "editkit",
+  "pages": [
+    "index",
+    "getting-started",
+    "---Concepts---",
+    "concepts/edit-formats",
+    "concepts/fuzzy-matching",
+    "concepts/streaming",
+    "---Recipes---",
+    "recipes/test-fix-loop",
+    "recipes/bulk-codemod",
+    "recipes/multi-file-refactor",
+    "recipes/architect-editor",
+    "recipes/lint-after-edit",
+    "recipes/pr-review-bot",
+    "recipes/slack-bot",
+    "recipes/framework-migration",
+    "recipes/cross-language-port",
+    "recipes/live-diff-preview",
+    "---Reference---",
+    "reference/api",
+    "reference/system-prompts",
+    "reference/failure-handling",
+    "reference/comparison"
+  ]
+}

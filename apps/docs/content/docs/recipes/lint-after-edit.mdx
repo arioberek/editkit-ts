@@ -1,0 +1,46 @@
+---
+title: Lint-after-edit auto-fix
+description: Apply, lint the touched files, feed lint errors back to the model. Catches malformed edits before they reach a commit.
+---
+
+Apply edits, run your linter on the files that changed, and if lint fails, hand the lint
+output to the model for a second pass. Cheap insurance against edits that parse but produce
+syntactically-suspect code.
+
+```ts
+import { $ } from "bun";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+const results = await applyEdits(llmOutput, (p) => readFile(p, "utf8"));
+const written: string[] = [];
+for (const r of results) {
+  if (!r.ok) continue;
+  await writeFile(r.path, r.after);
+  written.push(r.path);
+}
+
+const lint = await $`biome check ${written}`.nothrow();
+if (lint.exitCode !== 0) {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt: `Fix these lint errors:\n${lint.stdout.toString()}`,
+  });
+  const fix = await applyEdits(text, (p) => readFile(p, "utf8"));
+  for (const r of fix) if (r.ok) await writeFile(r.path, r.after);
+}
+```
+
+## Why lint *after* applying
+
+Some lint rules (unused imports, missing returns) only fire once the code is fully on
+disk. Linting the LLM's raw output before applying misses these.
+
+## Pick a fast linter
+
+This loop fires every time the agent runs. A 200ms lint pass is fine; a 5-second one
+isn't. [biome](https://biomejs.dev) and [oxlint](https://oxc.rs/docs/guide/usage/linter)
+are the right tool here.

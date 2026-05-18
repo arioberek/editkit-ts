@@ -1,0 +1,36 @@
+---
+title: Framework migration with unified diffs
+description: Multi-hunk changes per file — Next 13 → 15, React class → hooks, Express 4 → 5. Unified diff stops the model from emitting placeholders.
+---
+
+For migrations that touch many places in one file (API surface changes, breaking config
+changes, idiom shifts), unified diff outperforms SEARCH/REPLACE. The diff structure stops
+the model from emitting `// ...rest unchanged` placeholders that lose context.
+
+```ts
+const page = await readFile("app/products/[id]/page.tsx", "utf8");
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: UNIFIED_DIFF_PROMPT,
+  prompt: `Migrate this Next 13 page to Next 15: async params, new metadata API, new caching defaults.\n\n\`\`\`tsx\n${page}\n\`\`\``,
+});
+const [r] = await applyEdits(
+  text,
+  { "app/products/[id]/page.tsx": page },
+  { formats: ["unified-diff"] },
+);
+if (r?.ok) await writeFile(r.path, r.after);
+```
+
+## Why unified diff wins here
+
+SEARCH/REPLACE works one block at a time. For a migration with 8 changes per file, that's
+8 separate SEARCH blocks — and the model often loses track of context between them. A
+unified diff is one continuous structure: 8 hunks in one block, with explicit line numbers
+and context lines anchoring each one.
+
+## When to use SEARCH/REPLACE instead
+
+If the migration is mostly *replacements* (rename API X to Y), SEARCH/REPLACE is fine and
+cheaper. Unified diff shines when you need *additions and removals* interleaved with
+unchanged context.

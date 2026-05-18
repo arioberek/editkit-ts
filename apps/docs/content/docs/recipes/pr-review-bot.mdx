@@ -1,0 +1,58 @@
+---
+title: GitHub PR review bot
+description: Webhook fires on a `/fix` comment. The model writes a unified diff that the bot commits back to the PR branch.
+---
+
+A `/fix` comment on a pull request triggers a webhook; the bot loads the file at the PR
+head, asks the model to apply the reviewer's feedback as a unified diff, and commits the
+result back to the PR branch via the GitHub API.
+
+```ts
+// Inside an octokit webhook handler
+const { data: file } = await octokit.repos.getContent({
+  owner,
+  repo,
+  path,
+  ref: pr.head.sha,
+});
+const original = Buffer.from((file as any).content, "base64").toString();
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  system: UNIFIED_DIFF_PROMPT,
+  prompt: `Apply this reviewer feedback to ${path}:\n\n> ${comment.body}\n\n\`\`\`\n${original}\n\`\`\``,
+});
+
+const [r] = await applyEdits(text, { [path]: original }, { formats: ["unified-diff"] });
+if (!r?.ok) {
+  await octokit.issues.createComment({
+    owner,
+    repo,
+    issue_number: pr.number,
+    body: `Couldn't apply: ${r?.message ?? "no edits parsed"}`,
+  });
+  return;
+}
+
+await octokit.repos.createOrUpdateFileContents({
+  owner,
+  repo,
+  path,
+  branch: pr.head.ref,
+  sha: (file as any).sha,
+  message: `fix: ${comment.body.slice(0, 60)}`,
+  content: Buffer.from(r.after).toString("base64"),
+});
+```
+
+## Why unified diff
+
+Reviewer feedback is usually multiple small changes scattered across a file. Unified diff
+keeps the structure visible and prevents the model from emitting `// ...rest unchanged`
+placeholders.
+
+## Reply on failure
+
+Always post the structured failure message back as a PR comment when the edit doesn't
+apply. The reviewer needs to know the bot tried; otherwise they'll assume their `/fix`
+went into the void.

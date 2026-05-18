@@ -1,0 +1,54 @@
+---
+title: Test-fix loop
+description: Aider's canonical recipe — failing test in, fix attempt out, retry once with the parser's error fed back, then bail.
+---
+
+This is the most common coding-agent pattern: feed a failing test to the model, apply the
+fix, and if anything failed to apply, hand the structured failure message back to the
+model for one retry. After that, give up.
+
+```ts
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+async function attempt(prompt: string) {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt,
+  });
+  const results = await applyEdits(text, (p) => readFile(p, "utf8"));
+  for (const r of results) if (r.ok) await writeFile(r.path, r.after);
+  return results.filter((r) => !r.ok);
+}
+
+const failures = await attempt(
+  `Fix the code so this test passes:\n\n${testOutput.slice(0, 2000)}`,
+);
+if (failures.length) {
+  await attempt(
+    `Your previous edit failed:\n${failures
+      .map((f) => `${f.path}: ${f.message}`)
+      .join("\n")}\n\nTry again.`,
+  );
+}
+```
+
+## Why "one retry, then bail"
+
+If the model can't recover from its own structured failure message, two more rounds won't
+help — they'll just burn tokens. The aider design treats the failure message as a single
+high-signal correction. Match that.
+
+## See it run
+
+The [`agent-loop` example](https://github.com/arioberek/editkit-ts/tree/main/examples/agent-loop)
+runs this exact pattern offline with a deterministic mock LLM. The first attempt fails on
+purpose (model invents a function name); the second succeeds after seeing the structured
+`search-not-found` error.
+
+```bash
+bun run --filter editkit-example-agent-loop demo
+```

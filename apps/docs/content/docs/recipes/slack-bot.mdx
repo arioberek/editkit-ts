@@ -1,0 +1,45 @@
+---
+title: Slack-driven edits
+description: Mention the bot, name a file, say what to do. The bot pushes a branch.
+---
+
+`@bot edit src/x.ts replace the constant timeout with an env var`. The bot resolves the
+file, runs the edit, and pushes a new branch you can review.
+
+```ts
+import { $ } from "bun";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { applyEdits } from "editkit";
+import { readFile, writeFile } from "node:fs/promises";
+
+app.event("app_mention", async ({ event, say }) => {
+  const m = event.text.match(/edit (\S+) (.+)/);
+  if (!m) return say("Usage: @bot edit <path> <instruction>");
+  const [, path, instruction] = m;
+
+  const original = await readFile(path, "utf8");
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    system: SEARCH_REPLACE_PROMPT,
+    prompt: `${instruction}\n\n\`\`\`\n${original}\n\`\`\``,
+  });
+  const [r] = await applyEdits(text, { [path]: original });
+  if (!r?.ok) return say(`Couldn't apply: ${r?.message ?? "no edits"}`);
+
+  await writeFile(path, r.after);
+  await $`git checkout -b ${`slack/${event.ts}`} && git commit -am ${instruction} && git push -u origin HEAD`;
+  await say(`Pushed branch \`slack/${event.ts}\``);
+});
+```
+
+## Why a branch instead of a direct commit
+
+Slack edits are casual by nature. Push to a branch and let the human reviewer decide
+whether to PR/merge. Avoids the "the bot just merged something weird to main" problem.
+
+## Path sanitization
+
+This snippet doesn't sanitize the path the user types. **In production, validate** that
+`path` resolves inside your repo root before reading or writing. Otherwise a Slack message
+like `@bot edit /etc/passwd ...` is a security hole.

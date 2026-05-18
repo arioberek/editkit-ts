@@ -1,0 +1,64 @@
+---
+title: Failure handling
+description: Every ApplyResult is either ok:true (with before/after) or ok:false (with reason + message). Pipe messages straight back into a retry prompt.
+---
+
+Every `ApplyResult` is either:
+
+```ts
+{ ok: true, before, after, edit, path }
+// or
+{ ok: false, reason, message, edit, path }
+```
+
+The `message` strings are written to be model-readable — pipe them straight into the next
+prompt. The `reason` codes are stable identifiers you can branch on in code.
+
+## Reason codes
+
+| reason                     | what it means                                                      |
+| -------------------------- | ------------------------------------------------------------------ |
+| `search-not-found`         | The SEARCH block doesn't appear in the file (even with fuzzing).   |
+| `ambiguous-match`          | The SEARCH block appears more than once.                           |
+| `hunk-context-mismatch`    | A unified-diff hunk's context lines don't appear in the file.      |
+| `missing-original`         | The file doesn't exist and `allowCreate` is `false`.               |
+| `invalid-format`           | The block can't be parsed.                                         |
+
+## Retry pattern
+
+```ts
+const results = await applyEdits(text, fileReader);
+const failures = results.filter((r) => !r.ok);
+
+if (failures.length) {
+  const errorBlock = failures
+    .map((f) => `${f.path}: ${f.message}`)
+    .join("\n");
+
+  // Re-render the affected files' current contents — the model needs both the
+  // failure message AND fresh source to re-quote from.
+  const affectedFiles = await Promise.all(
+    [...new Set(failures.map((f) => f.path))].map(async (p) => {
+      const content = await readFile(p, "utf8");
+      return `### ${p}\n\`\`\`\n${content}\n\`\`\``;
+    }),
+  );
+
+  const retryPrompt = `Your previous edit failed:\n${errorBlock}\n\nHere is the current state of the affected files:\n\n${affectedFiles.join("\n\n")}\n\nTry again.`;
+
+  // ... call the model with retryPrompt
+}
+```
+
+The failure message names the path and the problem but does **not** echo the SEARCH block
+that failed. That's intentional — re-rendering the file is what gives the model fresh
+source to re-quote from.
+
+## Bail after one retry
+
+If the model can't recover from its own structured failure message, two more rounds rarely
+help. The aider design treats the failure message as a single high-signal correction. After
+one retry, surface the failure to the human (or to your test runner) rather than burning
+tokens.
+
+See the [test-fix loop recipe](/docs/recipes/test-fix-loop) for the full pattern.

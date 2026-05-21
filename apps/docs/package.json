@@ -25,6 +25,7 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "fumadocs-typescript": "^5.2.6",
     "postcss": "^8.4.49",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.7.2"

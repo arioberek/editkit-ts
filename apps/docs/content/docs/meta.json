@@ -22,6 +22,7 @@
     "reference/api",
     "reference/system-prompts",
     "reference/failure-handling",
+    "reference/troubleshooting",
     "reference/comparison"
   ]
 }

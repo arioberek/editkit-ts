@@ -3,9 +3,16 @@ title: API
 description: All public functions and types exported by `editkit` and `editkit/ai-sdk`.
 ---
 
+The type tables on this page are **generated from the source** at
+[`packages/editkit/src/types.ts`](https://github.com/arioberek/editkit-ts/blob/main/packages/editkit/src/types.ts).
+If you spot a drift between this page and the package, file an
+[issue](https://github.com/arioberek/editkit-ts/issues) — it's a docs build bug, not a
+description that needs editing.
+
 ## `parseEdits(input, options?)`
 
-Parse all edits from an LLM response. Returns a sorted array of `ParsedEdit`s. No file I/O.
+Parse all edits from an LLM response. Returns a sorted array of [`ParsedEdit`](#parsededit)s.
+No file I/O.
 
 ```ts
 import { parseEdits } from "editkit";
@@ -15,12 +22,12 @@ const edits = parseEdits(llmOutput);
 ```
 
 Pass `{ formats: ["search-replace"] }` to restrict parsing to one format (useful when
-you've prompted in one format and want hard-fails on the others).
+you've prompted the model in one format and want hard-fails on the others).
 
 ## `applyEdits(input, files, options?)`
 
-Parse and apply in one async call. Returns one `ApplyResult` per parsed edit, in source
-order.
+Parse and apply in one async call. Returns one [`ApplyResult`](#applyresult) per parsed
+edit, in source order.
 
 ```ts
 import { applyEdits } from "editkit";
@@ -30,18 +37,12 @@ const results = await applyEdits(llmOutput, {
 });
 ```
 
-`files` is either:
-
-- A `Record<string, string>` (path → current contents), or
-- An async function `(path: string) => Promise<string | null>`.
-
-Return `null` (or throw) for paths that don't exist; the applier treats the edit as a
-"create" if the format and `allowCreate` (default `true`) permit.
+`files` is either a [`FileMap`](#filemap) or a [`FileReader`](#filereader) function.
 
 ## `applyEditsSync(input, files, options?)`
 
-Synchronous variant. Requires a `Record<string, string>` (no async file reader). Useful in
-tests and in environments where you've pre-loaded everything into memory.
+Synchronous variant. Requires a [`FileMap`](#filemap). Useful in tests, in the browser, or
+in environments where you've pre-loaded everything into memory.
 
 ## `streamEdits(stream, files, options?)` *(in `editkit/ai-sdk`)*
 
@@ -60,7 +61,7 @@ See [streaming concepts](/docs/concepts/streaming) for what "complete" means per
 
 ## `fuzzyReplace(original, search, replace, options?)`
 
-Exposed as a primitive in case you want the matching logic without the parsing layer.
+The matching primitive without the parsing layer.
 
 ```ts
 import { fuzzyReplace } from "editkit";
@@ -84,40 +85,80 @@ detectFormats(llmOutput);
 
 ## Types
 
+### `EditFormat`
+
 ```ts
 type EditFormat = "search-replace" | "unified-diff" | "whole-file";
+```
 
-interface ParsedEdit {
-  format: EditFormat;
-  path: string;
-  // ...format-specific fields
-  range: { start: number; end: number };
-}
+### `ParsedEdit`
 
-type FileReader =
-  | Record<string, string>
-  | ((path: string) => Promise<string | null> | string | null);
+`ParsedEdit` is a union of [`SearchReplaceEdit`](#searchreplaceedit),
+[`UnifiedDiffEdit`](#unifieddiffedit), and [`WholeFileEdit`](#wholefileedit).
 
+### `SearchReplaceEdit`
+
+<auto-type-table cwd path="../../packages/editkit/src/types.ts" name="SearchReplaceEdit" />
+
+### `UnifiedDiffEdit`
+
+<auto-type-table cwd path="../../packages/editkit/src/types.ts" name="UnifiedDiffEdit" />
+
+### `UnifiedDiffHunk`
+
+<auto-type-table cwd path="../../packages/editkit/src/types.ts" name="UnifiedDiffHunk" />
+
+### `WholeFileEdit`
+
+<auto-type-table cwd path="../../packages/editkit/src/types.ts" name="WholeFileEdit" />
+
+### `ApplyResult`
+
+A discriminated union — `{ ok: true, ... }` on success, `{ ok: false, reason, message, ... }`
+on failure. See [failure handling](/docs/reference/failure-handling) for the full retry
+recipe.
+
+```ts
 type ApplyResult =
   | { ok: true; path: string; before: string; after: string; edit: ParsedEdit }
-  | {
-      ok: false;
-      path: string;
-      reason: ApplyFailureReason;
-      message: string;
-      edit: ParsedEdit;
-    };
+  | { ok: false; path: string; reason: ApplyFailureReason; message: string; edit: ParsedEdit };
+```
 
+### `ApplyFailureReason`
+
+```ts
 type ApplyFailureReason =
   | "search-not-found"
   | "ambiguous-match"
-  | "hunk-context-mismatch"
   | "missing-original"
-  | "invalid-format";
-
-interface ApplyOptions {
-  formats?: EditFormat[];
-  fuzzyWhitespace?: boolean;   // default true
-  allowCreate?: boolean;       // default true
-}
+  | "hunk-context-mismatch"
+  | "invalid-format"
+  | "io-error";
 ```
+
+See [failure handling](/docs/reference/failure-handling) for what triggers each code and
+how to use them in a retry loop.
+
+### `FileMap`
+
+```ts
+type FileMap = Record<string, string>;
+```
+
+Path → current file contents.
+
+### `FileReader`
+
+```ts
+type FileReader =
+  | FileMap
+  | ((path: string) => string | null | Promise<string | null>);
+```
+
+Either a sync map or a function. Functions may return `null` (or throw) for paths that
+don't exist; the applier treats a missing file as a "create" when `allowCreate` is true and
+the format supports creation.
+
+### `ApplyOptions`
+
+<auto-type-table cwd path="../../packages/editkit/src/types.ts" name="ApplyOptions" />

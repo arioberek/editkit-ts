@@ -1,0 +1,193 @@
+---
+title: Troubleshooting
+description: Common pitfalls when wiring editkit into a coding agent, with the fix for each.
+---
+
+## The model emits `// ...rest unchanged` and the edit destroys my file
+
+**Symptom**: a SEARCH/REPLACE block applies cleanly but the new file contents lost a
+function that should still be there. The diff looks like the model dropped a chunk.
+
+**Cause**: when prompted for SEARCH/REPLACE on a large file, weaker models cheat by
+replacing the unchanged middle with a placeholder comment like
+`// ...rest of file unchanged`. The applier has no way to know the placeholder isn't real.
+
+**Fix**: switch the format to **unified-diff** for that prompt. The diff structure forces
+the model to either touch lines or leave them as context — there's no syntactic room for
+"...". This is exactly why the [framework-migration recipe](/docs/recipes/framework-migration)
+recommends unified-diff for multi-hunk changes.
+
+```ts
+const results = await applyEdits(text, files, { formats: ["unified-diff"] });
+```
+
+If you must stick with SEARCH/REPLACE (e.g. small models), instruct the model in the system
+prompt to **never use placeholder comments** and to make multiple targeted SEARCH/REPLACE
+blocks instead of one big one.
+
+## The SEARCH block fails with `search-not-found` even though I can eyeball the match
+
+**Symptom**: the SEARCH text looks identical to a chunk of the file, but
+`{ ok: false, reason: "search-not-found" }`.
+
+**Cause**: the most likely culprit is whitespace — the model normalized indentation or
+trailing spaces in a way that broke an exact match. editkit's fuzzy matching has three
+strategies, but they assume the SEARCH chunk is *contiguous* in the file with a consistent
+indent shift.
+
+**Fix**: in your retry prompt, re-render the current file contents alongside the failure
+message. The model needs *fresh source* to re-quote from. The
+[failure-handling doc](/docs/reference/failure-handling#retry-pattern) has the canonical
+retry shape — both the structured `message` and the re-rendered file go into the next
+prompt.
+
+If you're applying edits offline (no model in the loop), check:
+
+- Does the file use CRLF line endings? editkit preserves them but only after the SEARCH
+  matches. If the SEARCH has `\n` and the file has `\r\n`, the exact strategy fails.
+- Does the file contain trailing whitespace the SEARCH didn't quote? Strategy 3
+  (trim-eol) handles this — but only when the trailing whitespace is uniform.
+
+## `ambiguous-match` — the SEARCH appears twice and I don't know which one to pick
+
+**Symptom**: `{ ok: false, reason: "ambiguous-match", message: "SEARCH block matched 2
+locations..." }`.
+
+**Cause**: the SEARCH block is genuinely not unique. editkit refuses to guess.
+
+**Fix**: re-prompt with the failure message — the model will know to extend the SEARCH
+with surrounding context until it's unique. The `message` string is already written to
+explain this to the model.
+
+If you're hand-authoring the input, add more lines above and below the changed region until
+the chunk only matches once.
+
+## Unified-diff edit reports `hunk-context-mismatch`
+
+**Symptom**: `{ ok: false, reason: "hunk-context-mismatch" }`. The diff parses fine but
+applying fails.
+
+**Cause**: the hunk's context lines (the unchanged ones bracketing the change) don't
+appear in the file at the location the hunk header points to *or* anywhere within the
+drift tolerance. The hunk is targeting an old version of the file.
+
+**Fix**: the model probably has a stale view of the file. Pass the file's current contents
+into the next prompt and ask the model to re-emit the diff.
+
+editkit *does* tolerate line-number drift — the parser searches for the context lines
+within ±5 lines of the hunk header. If your file has shifted by more than that, the fix
+is to re-prompt.
+
+## Multi-file edit applied only some of the files
+
+**Symptom**: `applyEdits` returns an array where some entries are `ok: true` and others are
+`ok: false`. Your code wrote the successful ones to disk; now the repo is half-applied.
+
+**Cause**: editkit applies each edit independently and reports per-edit results. There's
+no automatic rollback — that's a policy decision for the caller.
+
+**Fix**: choose all-or-nothing semantics at the prompt level:
+
+```ts
+const results = await applyEdits(text, files);
+const conflicts = results.filter((r) => !r.ok);
+if (conflicts.length) {
+  // Surface failures, don't write anything. Re-prompt or bail.
+  for (const c of conflicts) console.error(`✗ ${c.path}: ${c.message}`);
+  process.exit(1);
+}
+for (const r of results) if (r.ok) await writeFile(r.path, r.after);
+```
+
+See the [multi-file refactor recipe](/docs/recipes/multi-file-refactor) for the full
+pattern.
+
+## `streamEdits` never yields my last edit until end-of-stream
+
+**Symptom**: a unified-diff or SEARCH/REPLACE block is the last thing the model emits, and
+`streamEdits` only emits it when the stream closes — not as soon as the closing fence
+arrives.
+
+**Cause**: editkit waits for a "boundary" after a unified-diff body (another file header
+or a blank line) before considering the edit complete. SEARCH/REPLACE edits are emitted as
+soon as `>>>>>>> REPLACE` arrives.
+
+**Fix**: instruct the model in the system prompt to terminate each edit block with a blank
+line. For unified diffs in particular, this is the only way to tell mid-stream that the
+hunks are done.
+
+If you don't control the prompt, the final edit will still be emitted when `streamEdits`
+detects end-of-stream — just delivered all at once instead of mid-stream. Your downstream
+UI should expect this.
+
+## The model emitted a `whole-file` block and I lost a SEARCH/REPLACE block
+
+**Symptom**: an LLM response contains mixed formats (some SEARCH/REPLACE blocks, some
+unified diffs, a whole-file scaffold). `applyEdits` only applied the SEARCH/REPLACE ones.
+
+**Cause**: editkit's default `detectFormats` returns `whole-file` *only* when no other
+format markers are present. A mixed response silently drops the whole-file blocks under
+the default detector.
+
+**Fix**: pass `formats` explicitly when prompting for mixed output:
+
+```ts
+const results = await applyEdits(text, files, {
+  formats: ["search-replace", "unified-diff", "whole-file"],
+});
+```
+
+The [`mini-coding-agent` example](https://github.com/arioberek/editkit-ts/tree/main/examples/mini-coding-agent)
+uses this exact opt-in.
+
+## `missing-original` when I expected a new file
+
+**Symptom**: `{ ok: false, reason: "missing-original" }` on what should be a create.
+
+**Cause**: you passed `{ allowCreate: false }`, *or* the format doesn't support creation
+for that input shape. By default `allowCreate` is `true`. Empty `SEARCH` for
+search-replace, `--- /dev/null` for unified-diff, and any whole-file edit all support
+creation.
+
+**Fix**: drop `allowCreate: false`, *or* check the prompt — the model may have emitted a
+SEARCH block with non-empty SEARCH content but targeted a path that doesn't exist.
+
+## CRLF line endings get mangled
+
+**Symptom**: applying an edit converts `\r\n` to `\n` (or vice versa) somewhere in the
+file.
+
+**Cause**: this would be a bug. editkit's test suite explicitly covers CRLF
+preservation. File an [issue](https://github.com/arioberek/editkit-ts/issues) with the
+SEARCH text, the file, and the resulting output — the maintainer treats CRLF regressions
+as high priority.
+
+## My agent loop never terminates
+
+**Symptom**: the retry loop keeps spinning, model keeps emitting broken edits, you burn
+tokens.
+
+**Cause**: too many retries. The aider design treats a structured failure message as a
+*single* high-signal correction. After one retry, give up.
+
+**Fix**: cap retries at 1, then surface the failure to the human (or to the test runner).
+See the [test-fix loop recipe](/docs/recipes/test-fix-loop) for the canonical shape.
+
+```ts
+const failures = await attempt(initialPrompt);
+if (failures.length) {
+  const retryFailures = await attempt(buildRetryPrompt(failures));
+  if (retryFailures.length) {
+    // Bail. Two model calls is the budget.
+    throw new Error(`Could not apply edits: ${retryFailures.map(f => f.message).join("\n")}`);
+  }
+}
+```
+
+## Still stuck?
+
+- Search [existing issues](https://github.com/arioberek/editkit-ts/issues?q=is%3Aissue).
+- Open a new one with a minimal reproduction — the input LLM text, the file contents, and
+  the `ApplyResult[]` you got back. Adversarial fixtures are how editkit gets robust.
+- For prompts about *which format to choose*, see [edit formats](/docs/concepts/edit-formats).
+- For prompts about *how matching works*, see [fuzzy matching](/docs/concepts/fuzzy-matching).

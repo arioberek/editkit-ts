@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [22, 24]
         task: [typecheck, test, build]
     env:
       TURBO_TELEMETRY_DISABLED: 1
@@ -74,6 +74,6 @@ jobs:
           bun-version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: bun install --frozen-lockfile
       - run: bun run docs:build

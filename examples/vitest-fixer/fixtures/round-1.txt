@@ -1,0 +1,14 @@
+Looking at the failing tests, `parseDuration` returns the raw numeric value for every unit instead of multiplying by the unit's millisecond factor. The `ms` branch is fine; `s`, `m`, and `h` need fixing.
+
+target/src/parseDuration.ts
+<<<<<<< SEARCH
+  if (unit === "ms") return value;
+  if (unit === "s") return value;
+  if (unit === "m") return value;
+  if (unit === "h") return value;
+=======
+  if (unit === "ms") return value;
+  if (unit === "s") return value * 1000;
+  if (unit === "m") return value * 60_000;
+  if (unit === "h") return value * 3_600_000;
+>>>>>>> REPLACE

@@ -21,6 +21,7 @@
       "**/.turbo",
       "**/.next",
       "**/.source",
+      "**/.vercel",
       "**/next-env.d.ts",
       "examples/mini-coding-agent/target",
       "examples/mini-coding-agent/fixtures",

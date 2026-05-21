@@ -49,4 +49,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # setup-node writes ~/.npmrc with `${NODE_AUTH_TOKEN}`, so the publish
+          # step needs the token under that name too. Setting both makes the
+          # workflow robust against either npm CLI auth path.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

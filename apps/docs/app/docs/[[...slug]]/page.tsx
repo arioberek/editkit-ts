@@ -1,5 +1,5 @@
 import { source } from "@/lib/source";
-import defaultMdxComponents from "fumadocs-ui/mdx";
+import { getMDXComponents } from "@/mdx-components";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -20,7 +20,7 @@ export default async function Page({ params }: Props) {
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX components={defaultMdxComponents} />
+        <MDX components={getMDXComponents()} />
       </DocsBody>
     </DocsPage>
   );
@@ -30,9 +30,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) return {};
+
+  const ogUrl = `/og?title=${encodeURIComponent(page.data.title)}&description=${encodeURIComponent(page.data.description ?? "")}`;
+
   return {
     title: page.data.title,
     description: page.data.description,
+    openGraph: {
+      title: page.data.title,
+      description: page.data.description,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: page.data.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.data.title,
+      description: page.data.description,
+      images: [ogUrl],
+    },
   };
 }
 

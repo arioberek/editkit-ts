@@ -1,12 +1,20 @@
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
+import {
+  createFileSystemGeneratorCache,
+  createGenerator,
+  remarkAutoTypeTable,
+} from "fumadocs-typescript";
 
 export const docs = defineDocs({
   dir: "content/docs",
 });
 
+const generator = createGenerator({
+  cache: createFileSystemGeneratorCache(".next/fumadocs-typescript"),
+});
+
 export default defineConfig({
   mdxOptions: {
-    // Allow editkit's SEARCH/REPLACE fences to render as plain text inside code blocks.
-    // The default highlighter handles `ts`, `tsx`, `bash`, `diff`, `text`.
+    remarkPlugins: [[remarkAutoTypeTable, { generator }]],
   },
 });

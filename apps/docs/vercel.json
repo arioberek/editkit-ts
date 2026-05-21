@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && bunx turbo run build --filter=editkit-docs",
-  "ignoreCommand": "cd ../.. && bunx turbo-ignore editkit-docs"
+  "ignoreCommand": "bunx turbo-ignore editkit-docs"
 }

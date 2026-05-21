@@ -45,12 +45,7 @@
       "import": "./dist/ai-sdk.js"
     }
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
-  ],
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "bun test tests/",

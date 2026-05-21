@@ -15,6 +15,10 @@ export const baseOptions: BaseLayoutProps = {
       url: "/docs/recipes/test-fix-loop",
     },
     {
+      text: "Playground",
+      url: "/playground",
+    },
+    {
       text: "API",
       url: "/docs/reference/api",
     },

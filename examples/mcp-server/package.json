@@ -1,0 +1,24 @@
+{
+  "name": "editkit-example-mcp-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "demo": "bun run src/demo.ts",
+    "test": "bun test test/",
+    "typecheck": "tsc --noEmit"
+  },
+  "bin": {
+    "editkit-mcp": "./src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "editkit": "workspace:*",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.13",
+    "typescript": "^5.7.2"
+  }
+}

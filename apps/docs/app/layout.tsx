@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
   description:
     "Parse and apply SEARCH/REPLACE blocks, unified diffs, and whole-file edits with battle-tested fuzzy matching ported from aider.",
-  metadataBase: new URL("https://editkit.vercel.app"),
+  metadataBase: new URL("https://editkit.arielton.com"),
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

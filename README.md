@@ -33,7 +33,7 @@ Full library docs: **[packages/editkit/README.md](./packages/editkit/README.md)*
 | [`editkit`](./packages/editkit)          | The library. Parsers, applier, AI SDK adapter.       | [![npm](https://img.shields.io/npm/v/editkit.svg)](https://www.npmjs.com/package/editkit)             |
 | [`editkit-docs`](./apps/docs)            | Documentation site (Fumadocs + Next.js).             | private                                                                                               |
 
-📖 **[Read the docs →](https://editkit.vercel.app)**
+📖 **[Read the docs →](https://editkit.arielton.com)**
 
 ## Examples
 
